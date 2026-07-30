@@ -3,26 +3,43 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { apiFetch } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+
+const loginSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(1, 'La contraseña es requerida'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const { login } = useAuth();
+  const [serverError, setServerError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (form: LoginForm) => {
+    setServerError('');
     try {
       const data = await apiFetch('/auth/login', {
         method: 'POST',
         body: JSON.stringify(form),
       });
-      localStorage.setItem('token', data.access_token);
-      localStorage.setItem('edificio', JSON.stringify(data.edificio));
+      login(data.access_token, data.edificio);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      setServerError(err.message);
     }
   };
 
@@ -32,19 +49,21 @@ export default function LoginPage() {
         <div className="card bg-base-100 shadow-xl w-full">
           <div className="card-body">
             <h2 className="card-title text-2xl mb-4">Iniciar Sesión</h2>
-            {error && <div className="alert alert-error">{error}</div>}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {serverError && <div className="alert alert-error">{serverError}</div>}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <label className="form-control">
                 <span className="label-text">Email</span>
-                <input type="email" className="input input-bordered" value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                <input type="email" {...register('email')} className="input input-bordered" />
+                {errors.email && <span className="text-error text-sm mt-1">{errors.email.message}</span>}
               </label>
               <label className="form-control">
                 <span className="label-text">Contraseña</span>
-                <input type="password" className="input input-bordered" value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                <input type="password" {...register('password')} className="input input-bordered" />
+                {errors.password && <span className="text-error text-sm mt-1">{errors.password.message}</span>}
               </label>
-              <button type="submit" className="btn btn-primary w-full">Ingresar</button>
+              <button type="submit" className="btn btn-primary w-full" disabled={isSubmitting}>
+                {isSubmitting ? <span className="loading loading-spinner" /> : 'Ingresar'}
+              </button>
             </form>
             <p className="text-center mt-4 text-sm">
               ¿No tienes cuenta? <Link href="/auth/register" className="link link-primary">Regístrate</Link>
