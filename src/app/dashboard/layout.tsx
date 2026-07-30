@@ -22,6 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const links = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/dashboard/zonas', label: 'Zonas' },
+    { href: '/dashboard/invitacion', label: 'Invitaciones' },
   ];
 
   return (
