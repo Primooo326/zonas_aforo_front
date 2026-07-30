@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "powershell -Command \"Remove-Item -Recurse -Force '.next' -ErrorAction SilentlyContinue\" && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "clean": "powershell -Command \"Remove-Item -Recurse -Force '.next' -ErrorAction SilentlyContinue\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",
