@@ -1,13 +1,34 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import ReservasCalendario from '@/components/ReservasCalendario';
+
+interface Zona {
+  _id: string;
+  nombre: string;
+  horarioInicio: string;
+  horarioFin: string;
+  aforoMaximo: number;
+  lapsoMinutos: number;
+}
+
+interface Reserva {
+  _id: string;
+  zonaId?: { _id: string; nombre: string } | null;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  nombreSolicitante: string;
+  torreInmueble: string;
+  estado: string;
+}
 
 export default function DashboardPage() {
   const { edificio, isLoading } = useAuth();
-  const [zonas, setZonas] = useState<any[]>([]);
-  const [reservas, setReservas] = useState<any[]>([]);
+  const [zonas, setZonas] = useState<Zona[]>([]);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
   const edificioId = edificio?.id;
 
   useEffect(() => {
@@ -44,7 +65,7 @@ export default function DashboardPage() {
     <div>
       <h1 className="text-2xl font-bold mb-6">Panel de Control</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="stat bg-base-100 rounded-box shadow-sm">
           <div className="stat-title">Zonas Registradas</div>
           <div className="stat-value text-primary">{zonas.length}</div>
@@ -102,6 +123,10 @@ export default function DashboardPage() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="mb-6">
+        <ReservasCalendario edificioId={edificio.id} />
       </div>
 
       <div className="bg-base-100 rounded-box shadow-sm p-4">
