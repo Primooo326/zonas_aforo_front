@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import ReservasCalendario from '@/components/ReservasCalendario';
+import ReservasDia from '@/components/ReservasDia';
 
 interface Zona {
   _id: string;
@@ -86,44 +87,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-base-100 rounded-box shadow-sm p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-3">
-          Reservas del Día
-          <span className="text-sm text-base-content/60 ml-2 font-normal">(actualizado cada 30s)</span>
-        </h2>
-        {reservas.length === 0 ? (
-          <p className="text-base-content/60">No hay reservas para hoy.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Zona</th>
-                  <th>Solicitante</th>
-                  <th>Torre</th>
-                  <th>Hora</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservas.map((r) => (
-                  <tr key={r._id}>
-                    <td>{r.zonaId?.nombre || '—'}</td>
-                    <td>{r.nombreSolicitante}</td>
-                    <td>{r.torreInmueble}</td>
-                    <td>{r.horaInicio} - {r.horaFin}</td>
-                    <td>
-                      <span className={`badge badge-sm ${r.estado === 'activa' ? 'badge-success' : 'badge-error'}`}>
-                        {r.estado === 'activa' ? 'Activa' : 'Cancelada'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <ReservasDia zonas={zonas} reservas={reservas} />
 
       <div className="mb-6">
         <ReservasCalendario edificioId={edificio.id} />
