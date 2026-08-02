@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import TimePicker from '@/components/TimePicker';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { API_URL } from '@/lib/api';
 
 interface Zona {
   _id: string;
