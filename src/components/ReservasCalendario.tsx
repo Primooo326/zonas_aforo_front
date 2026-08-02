@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import calendarjs from '@calendarjs/ce';
-import '@calendarjs/ce/dist/style.css';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import {
+  addDias,
+  diasDeSemana,
+  fechaDesdeISO,
+  fechaLocal,
+  formatoCorto,
+  formatoLargo,
+  inicioSemana,
+} from '@/lib/fecha';
 
 interface Zona {
   _id: string;
@@ -22,6 +29,8 @@ interface Reserva {
   torreInmueble: string;
   estado: string;
 }
+
+const DIAS_NOMBRE = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const PALETA = [
   '#3b82f6',
@@ -42,85 +51,12 @@ function colorDeZona(id: string) {
   return PALETA[hash % PALETA.length];
 }
 
-function hoyISO() {
-  return new Date().toISOString().split('T')[0];
-}
-
-function rangoHorario(zonas: Zona[]) {
-  if (!zonas.length) return undefined;
-  const inicios = zonas.map((z) => z.horarioInicio).sort();
-  const fines = zonas.map((z) => z.horarioFin).sort();
-  return [inicios[0], fines[fines.length - 1]];
-}
-
-interface SchedInstance {
-  type: 'week' | 'day';
-  value: string;
-  setData: (data: unknown[]) => void;
-  setRange: (range: string[]) => void;
-  render: () => void;
-  prev: () => void;
-  next: () => void;
-  today: () => void;
-}
-
 export default function ReservasCalendario({ edificioId }: { edificioId: string }) {
-  const contRef = useRef<HTMLDivElement>(null);
-  const schedRef = useRef<SchedInstance | null>(null);
-  const reservasRef = useRef<Reserva[]>([]);
-  const zonasRef = useRef<Zona[]>([]);
-
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [tipo, setTipo] = useState<'week' | 'day'>('week');
-  const [fecha, setFecha] = useState(hoyISO());
+  const [fecha, setFecha] = useState(fechaLocal());
   const [detalle, setDetalle] = useState<Reserva | null>(null);
-
-  useEffect(() => {
-    zonasRef.current = zonas;
-  }, [zonas]);
-
-  useEffect(() => {
-    reservasRef.current = reservas;
-  }, [reservas]);
-
-  useEffect(() => {
-    if (!edificioId || !contRef.current) return;
-    const cont = contRef.current;
-    const inst = calendarjs.Schedule(cont, {
-      type: 'week',
-      value: hoyISO(),
-      grid: 15,
-      overlap: true,
-      data: [],
-    });
-    schedRef.current = inst as unknown as SchedInstance;
-
-    const onClick = (e: MouseEvent) => {
-      const el = (e.target as HTMLElement).closest('.lm-schedule-item') as HTMLElement | null;
-      if (el) {
-        const r = reservasRef.current.find((x) => x._id === el.id);
-        if (r) setDetalle(r);
-      }
-    };
-    cont.addEventListener('click', onClick);
-
-    return () => {
-      cont.removeEventListener('click', onClick);
-      cont.innerHTML = '';
-      schedRef.current = null;
-    };
-  }, [edificioId]);
-
-  useEffect(() => {
-    if (!schedRef.current) return;
-    schedRef.current.type = tipo;
-    schedRef.current.render();
-  }, [tipo]);
-
-  const setData = (data: unknown[]) => {
-    if (schedRef.current) schedRef.current.setData(data);
-  };
 
   useEffect(() => {
     if (!edificioId) return;
@@ -143,74 +79,44 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
     };
   }, [edificioId]);
 
-  useEffect(() => {
-    if (!reservas.length) {
-      setData([]);
-      return;
-    }
-    const colorPorZona: Record<string, string> = {};
-    zonasRef.current.forEach((z) => {
-      colorPorZona[z._id] = colorDeZona(z._id);
-    });
-    const eventos = reservas
-      .filter((r) => r.estado === 'activa')
-      .map((r) => {
-        const zonaId = r.zonaId?._id || '';
-        return {
-          guid: r._id,
-          title: r.zonaId?.nombre || 'Zona',
-          description: `${r.nombreSolicitante} · ${r.torreInmueble || '—'}`,
-          date: r.fecha,
-          start: r.horaInicio,
-          end: r.horaFin,
-          color: colorPorZona[zonaId] || '#66b244',
-          readonly: true,
-        };
-      });
-    setData(eventos);
-  }, [reservas, zonas]);
+  const hoy = fechaLocal();
+  const lunes = inicioSemana(fecha);
+  const dias = tipo === 'week' ? diasDeSemana(lunes) : [fecha];
+  const esHoy = (d: string) => d === hoy;
 
-  const validRange = rangoHorario(zonas);
+  const reservasDelDia = (d: string) =>
+    reservas
+      .filter((r) => r.fecha === d)
+      .sort((a, b) => (a.horaInicio < b.horaInicio ? -1 : 1));
 
-  useEffect(() => {
-    if (!schedRef.current) return;
-    if (validRange) {
-      try {
-        schedRef.current.setRange(validRange);
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [validRange]);
+  const titulo =
+    tipo === 'week'
+      ? `${formatoCorto(dias[0])} – ${formatoCorto(dias[6])} ${dias[0].slice(0, 4)}`
+      : formatoLargo(dias[0]);
 
   const navegar = (dir: 'prev' | 'next') => {
-    if (!schedRef.current) return;
-    schedRef.current[dir]();
-    setFecha(schedRef.current.value || fecha);
-  };
-
-  const irHoy = () => {
-    if (!schedRef.current) return;
-    schedRef.current.today();
-    setFecha(schedRef.current.value || hoyISO());
+    const diasMovidos = tipo === 'week' ? 7 : 1;
+    setFecha(addDias(fecha, dir === 'prev' ? -diasMovidos : diasMovidos));
   };
 
   return (
     <div className="bg-base-100 rounded-box shadow-sm p-4">
       <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-lg font-semibold capitalize">
           Calendario de Reservas
-          <span className="block text-sm text-base-content/60 font-normal sm:inline sm:ml-2">{fecha}</span>
+          <span className="block text-sm text-base-content/60 font-normal sm:inline sm:ml-2">{titulo}</span>
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex w-full sm:w-auto">
             <button
+              type="button"
               className={`btn btn-sm flex-1 sm:flex-none rounded-none rounded-s-full ${tipo === 'week' ? 'btn-active' : ''}`}
               onClick={() => setTipo('week')}
             >
               Semana
             </button>
             <button
+              type="button"
               className={`btn btn-sm flex-1 sm:flex-none rounded-none rounded-e-full ${tipo === 'day' ? 'btn-active' : ''}`}
               onClick={() => setTipo('day')}
             >
@@ -218,13 +124,21 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
             </button>
           </div>
           <div className="flex w-full sm:w-auto">
-            <button className="btn btn-sm flex-1 sm:flex-none rounded-none rounded-s-full" onClick={() => navegar('prev')}>
+            <button
+              type="button"
+              className="btn btn-sm flex-1 sm:flex-none rounded-none rounded-s-full"
+              onClick={() => navegar('prev')}
+            >
               ←
             </button>
-            <button className="btn btn-sm flex-1 sm:flex-none rounded-none" onClick={irHoy}>
+            <button type="button" className="btn btn-sm flex-1 sm:flex-none rounded-none" onClick={() => setFecha(hoy)}>
               Hoy
             </button>
-            <button className="btn btn-sm flex-1 sm:flex-none rounded-none rounded-e-full" onClick={() => navegar('next')}>
+            <button
+              type="button"
+              className="btn btn-sm flex-1 sm:flex-none rounded-none rounded-e-full"
+              onClick={() => navegar('next')}
+            >
               →
             </button>
           </div>
@@ -245,7 +159,65 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
         </div>
       )}
 
-      <div ref={contRef} className="cal-responsive" style={{ height: 'clamp(480px, 75vh, 720px)' }} />
+      <div className={`grid gap-3 ${tipo === 'week' ? 'sm:grid-cols-2 lg:grid-cols-7' : 'grid-cols-1 md:grid-cols-2'}`}>
+        {dias.map((d) => (
+          <div
+            key={d}
+            className={`rounded-box border p-2 min-h-40 ${
+              esHoy(d) ? 'border-primary/40 bg-primary/5' : 'border-base-300'
+            }`}
+          >
+            <div className="flex items-center justify-between px-1 pb-2 border-b border-base-300 mb-2">
+              <div className="text-xs uppercase tracking-wide text-base-content/60">
+                {DIAS_NOMBRE[fechaDesdeISO(d).getDay()]}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {esHoy(d) && <span className="badge badge-primary badge-sm">Hoy</span>}
+                <span className={`font-semibold ${esHoy(d) ? 'text-primary' : ''}`}>{formatoCorto(d)}</span>
+              </div>
+            </div>
+
+            {reservasDelDia(d).length === 0 ? (
+              <p className="text-xs text-base-content/50 px-1">Sin reservas</p>
+            ) : (
+              <div className="space-y-1.5">
+                {reservasDelDia(d).map((r) => {
+                  const cancelada = r.estado !== 'activa';
+                  return (
+                    <button
+                      key={r._id}
+                      type="button"
+                      onClick={() => setDetalle(r)}
+                      className="w-full text-left rounded-lg p-2 border border-base-300 bg-base-100 hover:border-primary/50 hover:bg-base-200 transition-colors"
+                      style={{
+                        borderLeftWidth: 4,
+                        borderLeftColor: colorDeZona(r.zonaId?._id || ''),
+                        opacity: cancelada ? 0.55 : 1,
+                        touchAction: 'manipulation',
+                      }}
+                    >
+                      <div className="text-xs font-semibold text-base-content/70">
+                        {r.horaInicio} - {r.horaFin}
+                      </div>
+                      <div className="text-sm font-bold leading-tight">
+                        {r.zonaId?.nombre || 'Zona'}
+                      </div>
+                      <div className="text-xs text-base-content/60 truncate">
+                        {r.nombreSolicitante} · {r.torreInmueble || '—'}
+                      </div>
+                      {cancelada && (
+                        <div className="text-xs mt-0.5">
+                          <span className="badge badge-sm badge-error">Cancelada</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
 
       {detalle && (
         <div className="modal modal-open" role="dialog">
@@ -260,7 +232,7 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
             <div className="space-y-2 text-sm">
               <p><strong>Solicitante:</strong> {detalle.nombreSolicitante}</p>
               <p><strong>Torre/Inmueble:</strong> {detalle.torreInmueble || '—'}</p>
-              <p><strong>Fecha:</strong> {detalle.fecha}</p>
+              <p><strong>Fecha:</strong> {formatoLargo(detalle.fecha)}</p>
               <p><strong>Horario:</strong> {detalle.horaInicio} - {detalle.horaFin}</p>
               <p>
                 <strong>Estado:</strong>{' '}
@@ -270,7 +242,7 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
               </p>
             </div>
             <div className="modal-action">
-              <button className="btn" onClick={() => setDetalle(null)}>
+              <button type="button" className="btn" onClick={() => setDetalle(null)}>
                 Cerrar
               </button>
             </div>

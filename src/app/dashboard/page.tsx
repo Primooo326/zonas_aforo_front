@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { fechaLocal } from '@/lib/fecha';
 import ReservasCalendario from '@/components/ReservasCalendario';
 import ReservasDia from '@/components/ReservasDia';
 
@@ -34,7 +35,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!edificioId) return;
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = fechaLocal();
     apiFetch(`/edificio/${edificioId}/reservas?fecha=${hoy}`)
       .then(setReservas)
       .catch(() => {});
@@ -49,7 +50,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!edificioId) return;
     const interval = setInterval(() => {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = fechaLocal();
       apiFetch(`/edificio/${edificioId}/reservas?fecha=${hoy}`)
         .then(setReservas)
         .catch(() => {});
