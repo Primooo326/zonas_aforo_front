@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://zonas.primooo.dev/api';
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -17,5 +17,5 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 }
 
 export function getSocketUrl() {
-  return process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
+  return process.env.NEXT_PUBLIC_SOCKET_URL || 'https://zonas.primooo.dev';
 }
