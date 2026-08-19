@@ -7,3 +7,55 @@
 
 @import "flatpickr/dist/flatpickr.css";
 @import "flyonui/src/vendor/flatpickr.css";
+
+.cal-responsive .lm-schedule thead td {
+  font-size: 1.4em;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.cal-responsive .lm-schedule table {
+  font-size: 0.72em;
+}
+
+.cal-responsive .lm-schedule thead td:first-child,
+.cal-responsive .lm-schedule .lm-schedule-hour > td:first-child {
+  width: 38px;
+}
+
+.cal-responsive .lm-schedule-item {
+  padding: 4px;
+}
+
+.cal-responsive .lm-schedule-item[data-height="1"],
+.cal-responsive .lm-schedule-item[data-height="2"],
+.cal-responsive .lm-schedule-item[data-height="3"] {
+  font-size: 0.65em;
+}
+
+@media (min-width: 640px) {
+  .cal-responsive .lm-schedule thead td {
+    font-size: 2.2em;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .cal-responsive .lm-schedule table {
+    font-size: 0.8em;
+  }
+
+  .cal-responsive .lm-schedule thead td:first-child,
+  .cal-responsive .lm-schedule .lm-schedule-hour > td:first-child {
+    width: 50px;
+  }
+
+  .cal-responsive .lm-schedule-item {
+    padding: 6px;
+  }
+
+  .cal-responsive .lm-schedule-item[data-height="1"],
+  .cal-responsive .lm-schedule-item[data-height="2"],
+  .cal-responsive .lm-schedule-item[data-height="3"] {
+    font-size: 0.7em;
+  }
+}
