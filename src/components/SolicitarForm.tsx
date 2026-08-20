@@ -7,8 +7,7 @@ import { API_URL } from '@/lib/api';
 interface Zona {
   _id: string;
   nombre: string;
-  horarioInicio: string;
-  horarioFin: string;
+  horarios: { dia: string; inicio: string; fin: string }[];
   aforoMaximo: number;
   lapsoMinutos: number;
 }
@@ -23,6 +22,12 @@ function sumarLapso(hora: string, lapso: number) {
   const [h, m] = hora.split(':').map(Number);
   const total = h * 60 + m + lapso;
   return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function diaDeFecha(fecha: string) {
+  return DIAS[new Date(fecha + 'T00:00:00').getDay()];
 }
 
 export default function SolicitarForm({ edificioId }: { edificioId: string }) {
@@ -50,6 +55,9 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   const [checking, setChecking] = useState(false);
 
   const zonaSel = zonas.find((z) => z._id === zonaId) ?? null;
+  const diaSel = form.fecha ? diaDeFecha(form.fecha) : '';
+  const horarioSel = zonaSel?.horarios?.find((h) => h.dia === diaSel) ?? null;
+  const diaSinHorario = !!zonaSel && !!form.fecha && !horarioSel;
 
   useEffect(() => {
     let active = true;
@@ -105,6 +113,10 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
       setError('Selecciona una zona');
       return;
     }
+    if (diaSinHorario) {
+      setError(`La zona no está disponible los ${diaSel}`);
+      return;
+    }
     if (disponibilidad.disponible === false) {
       setError('Aforo completo en esta franja horaria');
       return;
@@ -152,7 +164,9 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   if (success && successData) {
     return (
       <div className="card bg-base-100 shadow-sm p-8 text-center max-w-md">
-        <div className="text-4xl mb-4 text-success">&#10003;</div>
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-box bg-success/10 text-success">
+          <span className="icon-[tabler--circle-check] text-3xl" aria-hidden="true" />
+        </div>
         <h1 className="text-xl font-bold mb-2">Solicitud enviada</h1>
         <p className="text-base-content/60">
           Tu solicitud para <strong>{successData.zona}</strong> el {successData.fecha} de{' '}
@@ -206,8 +220,8 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
         {zonaSel && (
           <div className="flex flex-wrap gap-1 text-xs">
-            <span className="badge badge-outline badge-sm">
-              {zonaSel.horarioInicio} - {zonaSel.horarioFin}
+            <span className={`badge badge-sm ${horarioSel ? 'badge-outline' : 'badge-error'}`}>
+              {horarioSel ? `${horarioSel.inicio} - ${horarioSel.fin}` : `No disponible los ${diaSel}`}
             </span>
             <span className="badge badge-outline badge-sm">Aforo: {zonaSel.aforoMaximo}</span>
             <span className="badge badge-outline badge-sm">Lapso: {zonaSel.lapsoMinutos} min</span>
@@ -259,7 +273,13 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
             onChange={(e) => {
               const v = e.target.value;
               setForm({ ...form, fecha: v });
-              checkDisponibilidad(zonaSel, v, form.horaInicio);
+              const tieneHorario = zonaSel?.horarios?.some((h) => h.dia === diaDeFecha(v));
+              if (!tieneHorario) {
+                setForm((prev) => ({ ...prev, horaInicio: '' }));
+                setDisponibilidad({});
+              } else {
+                checkDisponibilidad(zonaSel, v, form.horaInicio);
+              }
             }}
           />
         </label>
@@ -272,8 +292,8 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
               setForm({ ...form, horaInicio: v });
               checkDisponibilidad(zonaSel, form.fecha, v);
             }}
-            minTime={zonaSel?.horarioInicio}
-            maxTime={zonaSel?.horarioFin}
+            minTime={horarioSel?.inicio}
+            maxTime={horarioSel?.fin}
           />
         </label>
 
@@ -284,6 +304,12 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
               &nbsp;(lapso: {zonaSel.lapsoMinutos} min)
             </p>
             <p className="text-base-content/50 italic">No es obligatorio usar todo el tiempo.</p>
+          </div>
+        )}
+
+        {diaSinHorario && (
+          <div className="alert alert-error text-sm">
+            La zona no está disponible los {diaSel}. Elige otra fecha.
           </div>
         )}
 
@@ -303,7 +329,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
         <button
           type="submit"
-          disabled={saving || !zonaId || disponibilidad.disponible === false}
+          disabled={saving || !zonaId || diaSinHorario || disponibilidad.disponible === false}
           className="btn btn-primary w-full mt-2"
         >
           {saving ? <span className="loading loading-spinner"></span> : 'Solicitar turno'}

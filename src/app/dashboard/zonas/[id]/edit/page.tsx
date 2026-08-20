@@ -3,12 +3,29 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import RangoHoraPicker, { RangoHora } from '@/components/RangoHoraPicker';
 
 const DIAS_OPTS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const RANGO_DEFAULT: RangoHora = { inicio: '08:00', fin: '18:00' };
 
 function tiempoAMinutos(t: string) {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
+}
+
+type DiaEstado = { activo: boolean; rango: RangoHora };
+
+function estadoInicial(horarios?: { dia: string; inicio: string; fin: string }[]): Record<string, DiaEstado> {
+  const estado = DIAS_OPTS.reduce<Record<string, DiaEstado>>((acc, d) => {
+    acc[d] = { activo: false, rango: { ...RANGO_DEFAULT } };
+    return acc;
+  }, {});
+  for (const h of horarios || []) {
+    if (estado[h.dia]) {
+      estado[h.dia] = { activo: true, rango: { inicio: h.inicio, fin: h.fin } };
+    }
+  }
+  return estado;
 }
 
 export default function EditZonaPage() {
@@ -17,12 +34,10 @@ export default function EditZonaPage() {
   const [form, setForm] = useState({
     nombre: '',
     descripcion: '',
-    horarioInicio: '',
-    horarioFin: '',
     aforoMaximo: 0,
     lapsoMinutos: 0,
-    diasDisponibles: [] as string[],
   });
+  const [horarios, setHorarios] = useState<Record<string, DiaEstado>>(() => estadoInicial());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -30,39 +45,39 @@ export default function EditZonaPage() {
   useEffect(() => {
     apiFetch(`/zonas/${params.id}`)
       .then((data) => {
+        const horariosNuevos = data.horarios?.length
+          ? data.horarios
+          : (data.diasDisponibles || []).map((d: string) => ({
+              dia: d,
+              inicio: data.horarioInicio || '08:00',
+              fin: data.horarioFin || '18:00',
+            }));
         setForm({
           nombre: data.nombre,
           descripcion: data.descripcion || '',
-          horarioInicio: data.horarioInicio,
-          horarioFin: data.horarioFin,
           aforoMaximo: data.aforoMaximo,
           lapsoMinutos: data.lapsoMinutos,
-          diasDisponibles: data.diasDisponibles || [],
         });
+        setHorarios(estadoInicial(horariosNuevos));
       })
       .catch(() => router.push('/dashboard/zonas'))
       .finally(() => setLoading(false));
   }, [params.id, router]);
 
   const validarForm = (): string | null => {
-    if (form.diasDisponibles.length === 0) return 'Selecciona al menos un día';
-    if (tiempoAMinutos(form.horarioInicio) >= tiempoAMinutos(form.horarioFin)) {
-      return 'El horario de fin debe ser posterior al de inicio';
-    }
-    const totalMin = tiempoAMinutos(form.horarioFin) - tiempoAMinutos(form.horarioInicio);
-    if (form.lapsoMinutos > totalMin) {
-      return `El lapso (${form.lapsoMinutos}min) excede el horario disponible (${totalMin}min)`;
+    const activos = DIAS_OPTS.filter((d) => horarios[d].activo);
+    if (activos.length === 0) return 'Selecciona al menos un día';
+    for (const d of activos) {
+      const { inicio, fin } = horarios[d].rango;
+      if (tiempoAMinutos(inicio) >= tiempoAMinutos(fin)) {
+        return `El horario de fin de ${d} debe ser posterior al de inicio`;
+      }
+      const totalMin = tiempoAMinutos(fin) - tiempoAMinutos(inicio);
+      if (form.lapsoMinutos > totalMin) {
+        return `El lapso (${form.lapsoMinutos}min) excede el horario disponible de ${d} (${totalMin}min)`;
+      }
     }
     return null;
-  };
-
-  const toggleDia = (dia: string) => {
-    setForm((prev) => ({
-      ...prev,
-      diasDisponibles: prev.diasDisponibles.includes(dia)
-        ? prev.diasDisponibles.filter((d) => d !== dia)
-        : [...prev.diasDisponibles, dia],
-    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,11 +89,19 @@ export default function EditZonaPage() {
     }
     setError('');
     setSaving(true);
+    const horariosEnviar = DIAS_OPTS.filter((d) => horarios[d].activo).map((d) => ({
+      dia: d,
+      inicio: horarios[d].rango.inicio,
+      fin: horarios[d].rango.fin,
+    }));
     try {
-      await apiFetch(`/zonas/${params.id}`, { method: 'PUT', body: JSON.stringify(form) });
+      await apiFetch(`/zonas/${params.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...form, horarios: horariosEnviar }),
+      });
       router.push('/dashboard/zonas');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar la zona');
     } finally {
       setSaving(false);
     }
@@ -109,18 +132,6 @@ export default function EditZonaPage() {
         </label>
         <div className="grid grid-cols-2 gap-4">
           <label className="form-control">
-            <span className="label-text">Horario Inicio</span>
-            <input name="horarioInicio" type="time" className="input input-bordered" value={form.horarioInicio}
-              onChange={(e) => setForm({ ...form, horarioInicio: e.target.value })} required />
-          </label>
-          <label className="form-control">
-            <span className="label-text">Horario Fin</span>
-            <input name="horarioFin" type="time" className="input input-bordered" value={form.horarioFin}
-              onChange={(e) => setForm({ ...form, horarioFin: e.target.value })} required />
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <label className="form-control">
             <span className="label-text">Aforo Máximo</span>
             <input name="aforoMaximo" type="number" min="1" className="input input-bordered" value={form.aforoMaximo}
               onChange={(e) => setForm({ ...form, aforoMaximo: Number(e.target.value) })} required />
@@ -132,13 +143,28 @@ export default function EditZonaPage() {
           </label>
         </div>
         <div className="form-control">
-          <span className="label-text mb-2">Días Disponibles</span>
-          <div className="flex flex-wrap gap-2">
+          <span className="label-text mb-2">Horarios por día</span>
+          <p className="text-xs text-base-content/60 mb-3">
+            Marca los días disponibles y ajusta su rango de horas (por defecto 08:00 – 18:00).
+          </p>
+          <div className="grid grid-cols-3 gap-y-3 items-center">
             {DIAS_OPTS.map((dia) => (
-              <button key={dia} type="button" onClick={() => toggleDia(dia)}
-                className={`btn btn-sm ${form.diasDisponibles.includes(dia) ? 'btn-primary' : 'btn-outline'}`}>
-                {dia}
-              </button>
+              <div key={dia} className="grid grid-cols-3 col-span-3 gap-2 items-center">
+                <span className="text-sm font-medium">{dia}</span>
+                <div className="col-span-2">
+                  <RangoHoraPicker
+                    dia={dia}
+                    activo={horarios[dia].activo}
+                    rango={horarios[dia].rango}
+                    onActivar={(d, activo) =>
+                      setHorarios((prev) => ({ ...prev, [d]: { ...prev[d], activo } }))
+                    }
+                    onRango={(d, rango) =>
+                      setHorarios((prev) => ({ ...prev, [d]: { ...prev[d], rango } }))
+                    }
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </div>

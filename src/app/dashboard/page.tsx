@@ -10,8 +10,7 @@ import ReservasDia from '@/components/ReservasDia';
 interface Zona {
   _id: string;
   nombre: string;
-  horarioInicio: string;
-  horarioFin: string;
+  horarios: { dia: string; inicio: string; fin: string }[];
   aforoMaximo: number;
   lapsoMinutos: number;
 }
@@ -69,21 +68,33 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="stat bg-base-100 rounded-box shadow-sm">
-          <div className="stat-title">Zonas Registradas</div>
+          <div className="stat-title flex items-center gap-2">
+            <span className="icon-[tabler--map-pin] text-lg text-primary" aria-hidden="true" />
+            Zonas Registradas
+          </div>
           <div className="stat-value text-primary">{zonas.length}</div>
         </div>
         <div className="stat bg-base-100 rounded-box shadow-sm">
-          <div className="stat-title">Aforo Total</div>
+          <div className="stat-title flex items-center gap-2">
+            <span className="icon-[tabler--users] text-lg text-secondary" aria-hidden="true" />
+            Aforo Total
+          </div>
           <div className="stat-value text-secondary">
             {zonas.reduce((sum, z) => sum + z.aforoMaximo, 0)}
           </div>
         </div>
         <div className="stat bg-base-100 rounded-box shadow-sm">
-          <div className="stat-title">Reservas Hoy</div>
+          <div className="stat-title flex items-center gap-2">
+            <span className="icon-[tabler--calendar-check] text-lg text-accent" aria-hidden="true" />
+            Reservas Hoy
+          </div>
           <div className="stat-value text-accent">{activas.length}</div>
         </div>
         <div className="stat bg-base-100 rounded-box shadow-sm">
-          <div className="stat-title">Canceladas Hoy</div>
+          <div className="stat-title flex items-center gap-2">
+            <span className="icon-[tabler--calendar-x] text-lg text-error" aria-hidden="true" />
+            Canceladas Hoy
+          </div>
           <div className="stat-value text-error">{canceladas.length}</div>
         </div>
       </div>
@@ -113,7 +124,13 @@ export default function DashboardPage() {
                 {zonas.map((z) => (
                   <tr key={z._id}>
                     <td>{z.nombre}</td>
-                    <td>{z.horarioInicio} - {z.horarioFin}</td>
+                    <td>
+                      {(z.horarios || []).map((h) => (
+                        <span key={h.dia} className="badge badge-xs badge-success mr-1 mb-1">
+                          {h.dia}: {h.inicio} - {h.fin}
+                        </span>
+                      ))}
+                    </td>
                     <td>{z.aforoMaximo}</td>
                     <td>{z.lapsoMinutos} min</td>
                   </tr>

@@ -9,6 +9,8 @@ interface TimePickerProps {
   minTime?: string;
   maxTime?: string;
   placeholder?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
 export default function TimePicker({
@@ -17,6 +19,8 @@ export default function TimePicker({
   minTime,
   maxTime,
   placeholder = 'HH:MM',
+  disabled = false,
+  className = 'input input-bordered',
 }: TimePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const fpRef = useRef<flatpickr.Instance | null>(null);
@@ -72,10 +76,11 @@ export default function TimePicker({
     <input
       ref={inputRef}
       type="text"
-      className="input input-bordered"
+      className={className}
       placeholder={placeholder}
       value={value}
       readOnly
+      disabled={disabled}
     />
   );
 }

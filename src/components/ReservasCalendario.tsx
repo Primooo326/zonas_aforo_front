@@ -8,8 +8,7 @@ import { apiFetch } from '@/lib/api';
 interface Zona {
   _id: string;
   nombre: string;
-  horarioInicio: string;
-  horarioFin: string;
+  horarios: { dia: string; inicio: string; fin: string }[];
 }
 
 interface Reserva {
@@ -47,9 +46,10 @@ function hoyISO() {
 }
 
 function rangoHorario(zonas: Zona[]) {
-  if (!zonas.length) return undefined;
-  const inicios = zonas.map((z) => z.horarioInicio).sort();
-  const fines = zonas.map((z) => z.horarioFin).sort();
+  const horarios = zonas.flatMap((z) => z.horarios || []);
+  if (!horarios.length) return undefined;
+  const inicios = horarios.map((h) => h.inicio).sort();
+  const fines = horarios.map((h) => h.fin).sort();
   return [inicios[0], fines[fines.length - 1]];
 }
 

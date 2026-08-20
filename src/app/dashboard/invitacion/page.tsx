@@ -58,15 +58,17 @@ export default function InvitacionPage() {
                   className="btn btn-primary join-item"
                   onClick={() => navigator.clipboard.writeText(inviteUrl)}
                 >
+                  <span className="icon-[tabler--copy] text-lg" aria-hidden="true" />
                   Copiar
                 </button>
               </div>
             </div>
 
             <button
-              className="btn btn-outline btn-secondary w-full"
+              className="btn btn-outline btn-primary w-full"
               onClick={() => window.open(inviteUrl, '_blank')}
             >
+              <span className="icon-[tabler--external-link] text-lg" aria-hidden="true" />
               Abrir Invitación
             </button>
           </div>
