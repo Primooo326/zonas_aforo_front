@@ -26,6 +26,18 @@ interface Reserva {
   estado: string;
 }
 
+function colorPct(pct: number) {
+  if (pct >= 100) return 'text-error';
+  if (pct >= 75) return 'text-warning';
+  return 'text-success';
+}
+
+function barraPct(pct: number) {
+  if (pct >= 100) return 'progress-error';
+  if (pct >= 75) return 'progress-warning';
+  return 'progress-success';
+}
+
 export default function DashboardPage() {
   const { edificio, isLoading } = useAuth();
   const [zonas, setZonas] = useState<Zona[]>([]);
@@ -60,7 +72,26 @@ export default function DashboardPage() {
   if (isLoading || !edificio) return null;
 
   const activas = reservas.filter((r) => r.estado === 'activa');
-  const canceladas = reservas.filter((r) => r.estado === 'cancelada');
+
+  const ahora = new Date();
+  const hhmmAhora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+  const totalAforo = zonas.reduce((sum, z) => sum + z.aforoMaximo, 0);
+  const ocupacionAhora = activas.filter(
+    (r) => r.horaInicio <= hhmmAhora && hhmmAhora < r.horaFin,
+  ).length;
+  const pctOcupacionAhora = totalAforo > 0 ? Math.round((ocupacionAhora / totalAforo) * 100) : 0;
+
+  let picoTurnos = 0;
+  let picoHora = '';
+  for (const r of activas) {
+    const n = activas.filter((s) => s.horaInicio <= r.horaInicio && r.horaInicio < s.horaFin).length;
+    if (n > picoTurnos) {
+      picoTurnos = n;
+      picoHora = r.horaInicio;
+    }
+  }
+
+  const zonasEnUso = new Set(activas.map((r) => r.zonaId?._id).filter(Boolean)).size;
 
   return (
     <div>
@@ -69,18 +100,24 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="stat bg-base-100 rounded-box shadow-sm">
           <div className="stat-title flex items-center gap-2">
-            <span className="icon-[tabler--map-pin] text-lg text-primary" aria-hidden="true" />
-            Zonas Registradas
+            <span className="icon-[tabler--gauge] text-lg text-primary" aria-hidden="true" />
+            Ocupación Ahora
           </div>
-          <div className="stat-value text-primary">{zonas.length}</div>
-        </div>
-        <div className="stat bg-base-100 rounded-box shadow-sm">
-          <div className="stat-title flex items-center gap-2">
-            <span className="icon-[tabler--users] text-lg text-secondary" aria-hidden="true" />
-            Aforo Total
+          <div className={`stat-value ${colorPct(pctOcupacionAhora)}`}>{pctOcupacionAhora}%</div>
+          <div
+            className="progress mt-2"
+            role="progressbar"
+            aria-valuenow={pctOcupacionAhora}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className={`progress-bar ${barraPct(pctOcupacionAhora)}`}
+              style={{ width: `${pctOcupacionAhora}%` }}
+            />
           </div>
-          <div className="stat-value text-secondary">
-            {zonas.reduce((sum, z) => sum + z.aforoMaximo, 0)}
+          <div className="stat-desc">
+            {ocupacionAhora} de {totalAforo} cupos en uso
           </div>
         </div>
         <div className="stat bg-base-100 rounded-box shadow-sm">
@@ -92,10 +129,21 @@ export default function DashboardPage() {
         </div>
         <div className="stat bg-base-100 rounded-box shadow-sm">
           <div className="stat-title flex items-center gap-2">
-            <span className="icon-[tabler--calendar-x] text-lg text-error" aria-hidden="true" />
-            Canceladas Hoy
+            <span className="icon-[tabler--chart-bar] text-lg text-secondary" aria-hidden="true" />
+            Pico de Ocupación
           </div>
-          <div className="stat-value text-error">{canceladas.length}</div>
+          <div className="stat-value text-secondary">{picoHora || '—'}</div>
+          <div className="stat-desc">
+            {picoTurnos > 0 ? `${picoTurnos} turnos a la vez` : 'Sin reservas hoy'}
+          </div>
+        </div>
+        <div className="stat bg-base-100 rounded-box shadow-sm">
+          <div className="stat-title flex items-center gap-2">
+            <span className="icon-[tabler--building-community] text-lg text-warning" aria-hidden="true" />
+            Zonas en Uso
+          </div>
+          <div className="stat-value text-warning">{zonasEnUso}</div>
+          <div className="stat-desc">de {zonas.length} zonas registradas</div>
         </div>
       </div>
 
