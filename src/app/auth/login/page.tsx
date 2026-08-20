@@ -44,29 +44,45 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="hero min-h-screen bg-base-200">
-      <div className="hero-content w-full max-w-md">
+    <div className="flex min-h-dvh items-center justify-center bg-base-200 px-4 py-10">
+      <div className="w-full max-w-md">
         <div className="card bg-base-100 shadow-xl w-full">
-          <div className="card-body">
-            <h2 className="card-title text-2xl mb-4">Iniciar Sesión</h2>
+          <div className="card-body gap-5 p-6 sm:p-8">
+            <header className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-box bg-primary/10 text-primary">
+                <span className="icon-[tabler--building] text-xl" aria-hidden="true" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">Iniciar Sesión</h1>
+              <p className="mt-1.5 text-sm text-base-content/60">Accede al panel de tu edificio</p>
+            </header>
             {serverError && <div className="alert alert-error">{serverError}</div>}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              <label className="form-control">
-                <span className="label-text">Email</span>
-                <input type="email" {...register('email')} className="input input-bordered" />
-                {errors.email && <span className="text-error text-sm mt-1">{errors.email.message}</span>}
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+              <label className="flex flex-col gap-1.5">
+                <span className="label-text text-sm font-medium">Email</span>
+                <input type="email" {...register('email')} className="input" />
+                {errors.email && <span className="text-error text-sm">{errors.email.message}</span>}
               </label>
-              <label className="form-control">
-                <span className="label-text">Contraseña</span>
-                <input type="password" {...register('password')} className="input input-bordered" />
-                {errors.password && <span className="text-error text-sm mt-1">{errors.password.message}</span>}
+              <label className="flex flex-col gap-1.5">
+                <span className="label-text text-sm font-medium">Contraseña</span>
+                <input type="password" {...register('password')} className="input" />
+                {errors.password && <span className="text-error text-sm">{errors.password.message}</span>}
               </label>
               <button type="submit" className="btn btn-primary w-full" disabled={isSubmitting}>
-                {isSubmitting ? <span className="loading loading-spinner" /> : 'Ingresar'}
+                {isSubmitting ? (
+                  <span className="loading loading-spinner" />
+                ) : (
+                  <>
+                    <span className="icon-[tabler--login] text-lg" aria-hidden="true" />
+                    Ingresar
+                  </>
+                )}
               </button>
             </form>
-            <p className="text-center mt-4 text-sm">
-              ¿No tienes cuenta? <Link href="/auth/register" className="link link-primary">Regístrate</Link>
+            <p className="text-center text-sm text-base-content/60">
+              ¿No tienes cuenta?{' '}
+              <Link href="/auth/register" className="link link-primary font-medium">
+                Registra tu edificio
+              </Link>
             </p>
           </div>
         </div>
