@@ -1,8 +1,5 @@
 'use client';
 
-import flatpickr from 'flatpickr';
-import { useEffect, useRef } from 'react';
-
 interface TimePickerProps {
   value: string;
   onChange: (value: string) => void;
@@ -11,6 +8,19 @@ interface TimePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+}
+
+function aMinutos(t: string | undefined): number | null {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function aHora(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 export default function TimePicker({
@@ -22,65 +32,27 @@ export default function TimePicker({
   disabled = false,
   className = 'input input-bordered',
 }: TimePickerProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fpRef = useRef<flatpickr.Instance | null>(null);
-  const onChangeRef = useRef(onChange);
-
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
-
-  useEffect(() => {
-    const el = inputRef.current;
-    if (!el) return;
-
-    const fp = flatpickr(el, {
-      enableTime: true,
-      noCalendar: true,
-      dateFormat: 'H:i',
-      time_24hr: true,
-      defaultDate: value || undefined,
-      onChange: (_selectedDates, dateStr) => onChangeRef.current(dateStr),
-    });
-    fpRef.current = fp;
-
-    return () => {
-      fp.destroy();
-      fpRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const fp = fpRef.current;
-    if (!fp) return;
-    if (minTime !== undefined) fp.set('minTime', minTime);
-    if (maxTime !== undefined) fp.set('maxTime', maxTime);
-  }, [minTime, maxTime]);
-
-  useEffect(() => {
-    const fp = fpRef.current;
-    if (!fp) return;
-    const current = fp.selectedDates[0];
-    const currentStr = current ? fp.formatDate(current, 'H:i') : '';
-    if (currentStr !== value) {
-      if (!value) {
-        fp.clear();
-      } else {
-        fp.setDate(value, false);
-      }
-    }
-  }, [value]);
+  const aplicarLimites = (v: string) => {
+    const min = aMinutos(minTime);
+    const max = aMinutos(maxTime);
+    const cur = aMinutos(v);
+    if (cur === null) return v;
+    if (min !== null && cur < min) return aHora(min);
+    if (max !== null && cur > max) return aHora(max);
+    return v;
+  };
 
   return (
     <input
-      ref={inputRef}
-      type="text"
+      type="time"
+      step="60"
       className={className}
       placeholder={placeholder}
       value={value}
-      readOnly
       disabled={disabled}
+      min={minTime}
+      max={maxTime}
+      onChange={(e) => onChange(aplicarLimites(e.target.value))}
     />
   );
 }

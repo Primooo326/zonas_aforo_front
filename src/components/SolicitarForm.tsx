@@ -26,6 +26,12 @@ function sumarLapso(hora: string, lapso: number) {
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
+const STORAGE_KEYS = {
+  nombre: 'solicitante_nombre',
+  torre: 'solicitante_torre',
+  tipo: 'solicitante_tipo',
+};
+
 function diaDeFecha(fecha: string) {
   return DIAS[new Date(fecha + 'T00:00:00').getDay()];
 }
@@ -44,13 +50,24 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   const [saving, setSaving] = useState(false);
 
   const [zonaId, setZonaId] = useState('');
-  const [form, setForm] = useState(() => ({
-    nombreSolicitante: '',
-    torreInmueble: '',
-    fecha: new Date().toISOString().split('T')[0],
-    horaInicio: '',
-    tipo: 'propietario',
-  }));
+  const [form, setForm] = useState(() => {
+    const hoy = new Date().toISOString().split('T')[0];
+    let nombre = '';
+    let torre = '';
+    let tipo = 'propietario';
+    if (typeof window !== 'undefined') {
+      nombre = localStorage.getItem(STORAGE_KEYS.nombre) || '';
+      torre = localStorage.getItem(STORAGE_KEYS.torre) || '';
+      tipo = localStorage.getItem(STORAGE_KEYS.tipo) || 'propietario';
+    }
+    return {
+      nombreSolicitante: nombre,
+      torreInmueble: torre,
+      fecha: hoy,
+      horaInicio: '',
+      tipo,
+    };
+  });
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad>({});
   const [checking, setChecking] = useState(false);
 
@@ -139,6 +156,9 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         const err = await res.json();
         throw new Error(err.message || 'Error al enviar solicitud');
       }
+      localStorage.setItem(STORAGE_KEYS.nombre, form.nombreSolicitante);
+      localStorage.setItem(STORAGE_KEYS.torre, form.torreInmueble);
+      localStorage.setItem(STORAGE_KEYS.tipo, form.tipo);
       setSuccessData({
         zona: zonaSel?.nombre,
         fecha: form.fecha,
@@ -172,6 +192,25 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
           Tu solicitud para <strong>{successData.zona}</strong> el {successData.fecha} de{' '}
           {successData.horaInicio} a {successData.horaFin} ha sido registrada.
         </p>
+        <button
+          type="button"
+          className="btn btn-primary w-full mt-6"
+          onClick={() => {
+            setSuccess(false);
+            setSuccessData(null);
+            setZonaId('');
+            setError('');
+            setDisponibilidad({});
+            setForm((prev) => ({
+              ...prev,
+              fecha: new Date().toISOString().split('T')[0],
+              horaInicio: '',
+            }));
+          }}
+        >
+          <span className="icon-[tabler--calendar-plus] text-lg" aria-hidden="true" />
+          Volver a reservar
+        </button>
       </div>
     );
   }
