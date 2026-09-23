@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const links = [
     { href: '/dashboard', label: 'Panel de Control', icon: 'icon-[tabler--layout-dashboard]' },
     { href: '/dashboard/zonas', label: 'Zonas', icon: 'icon-[tabler--map-pin]' },
-    { href: '/dashboard/invitacion', label: 'Invitaciones', icon: 'icon-[tabler--qrcode]' },
+    { href: '/dashboard/inmuebles', label: 'Venta y Arriendo', icon: 'icon-[tabler--building]' },
   ];
 
   const closeDrawer = () => {
