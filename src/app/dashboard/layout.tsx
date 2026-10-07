@@ -31,13 +31,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Panel de Control', icon: 'icon-[tabler--layout-dashboard]' },
     { href: '/dashboard/zonas', label: 'Zonas', icon: 'icon-[tabler--map-pin]' },
     { href: '/dashboard/inmuebles', label: 'Venta y Arriendo', icon: 'icon-[tabler--building]' },
+    { href: '/dashboard/censo', label: 'Censo y Residentes', icon: 'icon-[tabler--users-group]' },
   ];
 
   const closeDrawer = () => {
     const el = document.getElementById('dashboard-drawer');
     if (el) {
-      if (window.HSOverlay && typeof window.HSOverlay.close === 'function') {
-        window.HSOverlay.close(el);
+      try {
+        if (window.HSOverlay && typeof window.HSOverlay.close === 'function') {
+          window.HSOverlay.close(el);
+        }
+      } catch {
+        // Ignorar si FlyonUI aún no tiene el elemento registrado en su colección
       }
       el.classList.remove('open', 'opened');
       el.classList.add('hidden');
@@ -48,8 +53,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen flex-col lg:flex-row">
-      <nav className="navbar bg-base-100 border-b border-base-content/10 lg:hidden">
-        <div className="navbar-start">
+      <nav className="navbar bg-base-100 border-b border-base-content/10 lg:hidden px-3 min-h-14">
+        <div className="flex-none">
           <button
             type="button"
             className="btn btn-ghost btn-square btn-sm"
@@ -62,15 +67,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="icon-[tabler--menu-2] text-xl" aria-hidden="true" />
           </button>
         </div>
-        <div className="navbar-center min-w-0">
-          <span className="truncate text-base font-semibold text-base-content">
+        <div className="flex-1 min-w-0 px-2 text-center">
+          <span className="truncate block text-sm sm:text-base font-semibold text-base-content">
             {edificio.nombre}
           </span>
         </div>
-        <div className="navbar-end">
-          <button onClick={logout} className="btn btn-outline btn-error btn-sm">
-            <span className="icon-[tabler--logout] text-lg" aria-hidden="true" />
-            Salir
+        <div className="flex-none">
+          <button onClick={logout} className="btn btn-outline btn-error btn-sm gap-1 px-2.5">
+            <span className="icon-[tabler--logout] text-base" aria-hidden="true" />
+            <span>Salir</span>
           </button>
         </div>
       </nav>
@@ -119,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <main className="flex-1 p-4 overflow-auto bg-base-200 lg:p-6">{children}</main>
+      <main className="flex-1 p-3 sm:p-4 overflow-auto bg-base-200 lg:p-6">{children}</main>
     </div>
   );
 }

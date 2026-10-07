@@ -40,6 +40,18 @@ interface Inmueble {
   piso?: number;
 }
 
+interface CensoStats {
+  totalUnidades: number;
+  totalPersonas: number;
+  menores: number;
+  adultos: number;
+  adultosMayores: number;
+  totalMascotas: number;
+  mascotasPeligrosas: number;
+  totalVehiculos: number;
+  pendientes: number;
+}
+
 function colorPct(pct: number) {
   if (pct >= 100) return 'text-error';
   if (pct >= 75) return 'text-warning';
@@ -70,6 +82,7 @@ export default function DashboardPage() {
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [inmuebles, setInmuebles] = useState<Inmueble[]>([]);
+  const [censoStats, setCensoStats] = useState<CensoStats | null>(null);
   const edificioId = edificio?.id;
 
   useEffect(() => {
@@ -91,6 +104,9 @@ export default function DashboardPage() {
     apiFetch(`/inmuebles?edificioId=${edificioId}`)
       .then(setInmuebles)
       .catch(() => {});
+    apiFetch('/censo/stats')
+      .then(setCensoStats)
+      .catch(() => {});
   }, [edificioId]);
 
   useEffect(() => {
@@ -102,6 +118,9 @@ export default function DashboardPage() {
         .catch(() => {});
       apiFetch(`/inmuebles?edificioId=${edificioId}`)
         .then(setInmuebles)
+        .catch(() => {});
+      apiFetch('/censo/stats')
+        .then(setCensoStats)
         .catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
@@ -258,6 +277,103 @@ export default function DashboardPage() {
             </div>
             <div className="stat-value text-warning">{totalOtrosTipos}</div>
             <div className="stat-desc">Parqueaderos o habitaciones</div>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 3: POBLACIÓN Y CENSO HABITACIONAL */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold text-base-content/70">
+            <span className="icon-[tabler--users-group] text-lg text-primary" aria-hidden="true" />
+            <span>Población y Censo Habitacional</span>
+          </div>
+          <Link
+            href="/dashboard/censo"
+            className="btn btn-outline btn-xs gap-1"
+          >
+            Ver Censo Completo
+            <span className="icon-[tabler--arrow-right] text-xs" aria-hidden="true" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+          <div className="stat bg-base-100 rounded-box shadow-sm p-3 sm:p-4">
+            <div className="stat-title flex items-center gap-1.5 text-xs text-base-content/60">
+              <span className="icon-[tabler--users] text-base text-primary" />
+              <span>Habitantes</span>
+            </div>
+            <div className="stat-value text-xl sm:text-2xl text-base-content mt-1">
+              {censoStats ? censoStats.totalPersonas : '-'}
+            </div>
+            <div className="stat-desc text-3xs mt-0.5 truncate">
+              en {censoStats ? censoStats.totalUnidades : '-'} unidades
+            </div>
+          </div>
+
+          <div className="stat bg-base-100 rounded-box shadow-sm p-3 sm:p-4">
+            <div className="stat-title flex items-center gap-1.5 text-xs text-info">
+              <span className="icon-[tabler--mood-kid] text-base" />
+              <span>Menores (&lt;18)</span>
+            </div>
+            <div className="stat-value text-xl sm:text-2xl text-info mt-1">
+              {censoStats ? censoStats.menores : '-'}
+            </div>
+            <div className="stat-desc text-3xs mt-0.5 truncate">niños y jóvenes</div>
+          </div>
+
+          <div className="stat bg-base-100 rounded-box shadow-sm p-3 sm:p-4">
+            <div className="stat-title flex items-center gap-1.5 text-xs text-warning">
+              <span className="icon-[tabler--user-heart] text-base" />
+              <span>Adultos Mayores</span>
+            </div>
+            <div className="stat-value text-xl sm:text-2xl text-warning mt-1">
+              {censoStats ? censoStats.adultosMayores : '-'}
+            </div>
+            <div className="stat-desc text-3xs mt-0.5 truncate">60+ años prioritarios</div>
+          </div>
+
+          <div className="stat bg-base-100 rounded-box shadow-sm p-3 sm:p-4">
+            <div className="stat-title flex items-center gap-1.5 text-xs text-secondary">
+              <span className="icon-[tabler--paw] text-base" />
+              <span>Mascotas</span>
+            </div>
+            <div className="stat-value text-xl sm:text-2xl text-secondary mt-1">
+              {censoStats ? censoStats.totalMascotas : '-'}
+            </div>
+            <div className="stat-desc text-3xs mt-0.5 truncate">
+              {censoStats && censoStats.mascotasPeligrosas > 0
+                ? `${censoStats.mascotasPeligrosas} manejo especial`
+                : 'registradas'}
+            </div>
+          </div>
+
+          <div className="stat bg-base-100 rounded-box shadow-sm p-3 sm:p-4">
+            <div className="stat-title flex items-center gap-1.5 text-xs text-success">
+              <span className="icon-[tabler--car] text-base" />
+              <span>Vehículos</span>
+            </div>
+            <div className="stat-value text-xl sm:text-2xl text-success mt-1">
+              {censoStats ? censoStats.totalVehiculos : '-'}
+            </div>
+            <div className="stat-desc text-3xs mt-0.5 truncate">parque automotor</div>
+          </div>
+
+          <div className="stat bg-base-100 rounded-box shadow-sm p-3 sm:p-4">
+            <div className="stat-title flex items-center gap-1.5 text-xs text-base-content/70">
+              <span className="icon-[tabler--home-check] text-base text-primary" />
+              <span>Unidades Censadas</span>
+            </div>
+            <div className="stat-value text-xl sm:text-2xl text-base-content mt-1">
+              {censoStats ? censoStats.totalUnidades : '-'}
+            </div>
+            <div className="stat-desc text-3xs mt-0.5 truncate">
+              {censoStats && censoStats.pendientes > 0 ? (
+                <span className="text-warning font-semibold">{censoStats.pendientes} por validar</span>
+              ) : (
+                'al día'
+              )}
+            </div>
           </div>
         </div>
       </div>
