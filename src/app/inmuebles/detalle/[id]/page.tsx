@@ -22,6 +22,11 @@ interface Inmueble {
   observacion?: string;
   imagenes: string[];
   estado: string;
+  censoUnidadId?: string | { _id: string; identificador?: string };
+  torre?: string;
+  numeroApto?: string;
+  identificador?: string;
+  itemAsignadoRef?: string;
 }
 
 export default function DetalleInmueblePage({ params }: { params: Promise<{ id: string }> }) {
@@ -113,6 +118,16 @@ export default function DetalleInmueblePage({ params }: { params: Promise<{ id: 
               <span className="badge badge-outline">{item.transaccion}</span>
               <span className={`badge ${item.estado === 'activa' ? 'badge-success' : 'badge-error'}`}>{item.estado}</span>
             </div>
+
+            {(item.identificador || item.numeroApto) && (
+              <div className="flex items-center gap-2 text-base font-semibold text-primary">
+                <span className="icon-[tabler--door] text-xl" />
+                <span>{item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto}`}</span>
+                {item.itemAsignadoRef && (
+                  <span className="badge badge-outline badge-sm">{item.itemAsignadoRef}</span>
+                )}
+              </div>
+            )}
 
             <h1 className="text-3xl font-bold">${item.precio.toLocaleString('es-CO')}</h1>
             <p className="text-sm text-base-content/60">

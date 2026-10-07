@@ -33,6 +33,14 @@ export default function EditInmueblePage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const [censoInfo, setCensoInfo] = useState<{
+    censoUnidadId?: string;
+    torre?: string;
+    numeroApto?: string;
+    identificador?: string;
+    itemAsignadoRef?: string;
+  } | null>(null);
+
   useEffect(() => {
     apiFetch(`/inmuebles/${id}`)
       .then((data: any) => {
@@ -52,6 +60,15 @@ export default function EditInmueblePage() {
           observacion: data.observacion || '',
         });
         setExistingImages(data.imagenes || []);
+        if (data.censoUnidadId || data.identificador) {
+          setCensoInfo({
+            censoUnidadId: typeof data.censoUnidadId === 'object' ? data.censoUnidadId?._id : data.censoUnidadId,
+            torre: data.torre,
+            numeroApto: data.numeroApto,
+            identificador: data.identificador,
+            itemAsignadoRef: data.itemAsignadoRef,
+          });
+        }
       })
       .catch(() => setError('No se pudo cargar la publicación'))
       .finally(() => setLoading(false));
@@ -103,6 +120,11 @@ export default function EditInmueblePage() {
       fd.append('telefono', form.telefono);
       if (form.emailContacto) fd.append('emailContacto', form.emailContacto);
       if (form.observacion) fd.append('observacion', form.observacion);
+      if (censoInfo?.censoUnidadId) fd.append('censoUnidadId', censoInfo.censoUnidadId);
+      if (censoInfo?.torre) fd.append('torre', censoInfo.torre);
+      if (censoInfo?.numeroApto) fd.append('numeroApto', censoInfo.numeroApto);
+      if (censoInfo?.identificador) fd.append('identificador', censoInfo.identificador);
+      if (censoInfo?.itemAsignadoRef) fd.append('itemAsignadoRef', censoInfo.itemAsignadoRef);
       // Mantener imágenes existentes
       if (existingImages.length > 0) fd.append('imagenes', JSON.stringify(existingImages));
       files.forEach((f) => fd.append('imagenes', f));
@@ -120,10 +142,40 @@ export default function EditInmueblePage() {
   const getImageUrl = (img: string) => (img.startsWith('/uploads') ? `${API_URL.replace('/api', '')}${img}` : img);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Editar Publicación</h1>
-      {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
-      <form onSubmit={handleSubmit} className="card bg-base-100 shadow-sm p-6 space-y-4">
+    <div className="max-w-2xl mx-auto space-y-4">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Editar Publicación</h1>
+        <p className="text-xs sm:text-sm text-base-content/60">
+          Modifica los detalles, precio o fotografías de la oferta
+        </p>
+      </div>
+
+      {error && <div className="alert alert-error text-sm">{error}</div>}
+
+      {censoInfo && (
+        <div className="bg-primary/5 border border-primary/20 rounded-box p-3 sm:p-4 flex items-center justify-between gap-3 text-xs sm:text-sm">
+          <div className="flex items-center gap-2 text-primary font-medium">
+            <span className="icon-[tabler--database-check] text-lg" />
+            <span>
+              Inmueble Vinculado: <strong>{censoInfo.identificador || `${censoInfo.torre ? censoInfo.torre + ' - ' : ''}Apto ${censoInfo.numeroApto}`}</strong>
+              {censoInfo.itemAsignadoRef ? ` (${censoInfo.itemAsignadoRef})` : ''}
+            </span>
+          </div>
+          {censoInfo.censoUnidadId && (
+            <a
+              href={`/dashboard/censo/${censoInfo.censoUnidadId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-xs btn-outline btn-primary gap-1"
+            >
+              <span className="icon-[tabler--external-link] text-xs" />
+              Ver Ficha
+            </a>
+          )}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="card bg-base-100 shadow-sm p-4 sm:p-6 space-y-4 border border-base-200">
         <div className="grid grid-cols-2 gap-4">
           <label className="form-control">
             <span className="label-text">Tipo *</span>
@@ -151,7 +203,7 @@ export default function EditInmueblePage() {
         <div className="grid grid-cols-2 gap-4">
           <label className="form-control">
             <span className="label-text">Metros²</span>
-            <input type="number" className="input input-bordered" value={form.metrosCuadrados} onChange={(e) => setForm({ ...form, metrosCuadrados: e.target.value })} />
+            <input type="number" step="any" className="input input-bordered" value={form.metrosCuadrados} onChange={(e) => setForm({ ...form, metrosCuadrados: e.target.value })} />
           </label>
           <label className="form-control">
             <span className="label-text">Piso</span>

@@ -18,6 +18,11 @@ interface Inmueble {
   imagenes: string[];
   estado: string;
   createdAt: string;
+  censoUnidadId?: string | { _id: string; identificador?: string };
+  torre?: string;
+  numeroApto?: string;
+  identificador?: string;
+  itemAsignadoRef?: string;
 }
 
 const tipoBadge = (tipo: string) => {
@@ -315,6 +320,25 @@ export default function InmueblesPage() {
                     </h3>
                     <span className="text-xs text-base-content/60">COP</span>
                   </div>
+
+                  {(item.identificador || item.numeroApto) && (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-base-content/90 mb-1.5 flex-wrap">
+                      <span className="icon-[tabler--door] text-sm text-primary" />
+                      <span>{item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto}`}</span>
+                      {item.itemAsignadoRef && (
+                        <span className="badge badge-outline badge-xs">{item.itemAsignadoRef}</span>
+                      )}
+                      {item.censoUnidadId && (
+                        <Link
+                          href={`/dashboard/censo/${typeof item.censoUnidadId === 'object' ? item.censoUnidadId._id : item.censoUnidadId}`}
+                          className="badge badge-success badge-xs gap-0.5 hover:opacity-80"
+                          title="Ver ficha de censo de la unidad"
+                        >
+                          <span className="icon-[tabler--check] text-[10px]" /> Censo
+                        </Link>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-1.5 text-xs text-base-content/70 mb-2">
                     {item.metrosCuadrados && (

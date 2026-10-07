@@ -22,6 +22,11 @@ interface Inmueble {
   imagenes: string[];
   estado: string;
   createdAt?: string;
+  censoUnidadId?: string | { _id: string; identificador?: string };
+  torre?: string;
+  numeroApto?: string;
+  identificador?: string;
+  itemAsignadoRef?: string;
 }
 
 const tipoBadge = (tipo: string) => {
@@ -426,6 +431,12 @@ export default function InmueblesPublicPage({ params }: { params: Promise<{ edif
                           )}
                           <div className="hidden sm:block">
                             <span className="font-semibold capitalize text-base-content">{item.tipo}</span>
+                            {(item.identificador || item.numeroApto) && (
+                              <p className="text-xs text-primary font-medium">
+                                {item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto}`}
+                                {item.itemAsignadoRef && ` (${item.itemAsignadoRef})`}
+                              </p>
+                            )}
                             {item.piso !== undefined && (
                               <p className="text-xs text-base-content/60">Piso {item.piso}</p>
                             )}
@@ -567,6 +578,16 @@ export default function InmueblesPublicPage({ params }: { params: Promise<{ edif
                       </h3>
                       <span className="text-xs text-base-content/60 font-medium">COP</span>
                     </div>
+
+                    {(item.identificador || item.numeroApto) && (
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-base-content/90 mb-2 flex-wrap">
+                        <span className="icon-[tabler--door] text-sm text-primary" />
+                        <span>{item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto}`}</span>
+                        {item.itemAsignadoRef && (
+                          <span className="badge badge-outline badge-xs">{item.itemAsignadoRef}</span>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap gap-1.5 text-xs text-base-content/70 mb-3">
                       {item.metrosCuadrados && (

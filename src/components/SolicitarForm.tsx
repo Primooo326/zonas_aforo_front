@@ -12,6 +12,13 @@ interface Zona {
   lapsoMinutos: number;
 }
 
+interface UnidadPublica {
+  _id: string;
+  identificador: string;
+  torre?: string;
+  numeroApto?: string;
+}
+
 interface Disponibilidad {
   disponible?: boolean;
   ocupadas?: number;
@@ -29,6 +36,7 @@ const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 const STORAGE_KEYS = {
   nombre: 'solicitante_nombre',
   torre: 'solicitante_torre',
+  telefono: 'solicitante_telefono',
   tipo: 'solicitante_tipo',
 };
 
@@ -49,16 +57,25 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   } | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Unidades del Censo
+  const [unidadesCenso, setUnidadesCenso] = useState<UnidadPublica[]>([]);
+  const [cargandoCenso, setCargandoCenso] = useState(true);
+  const [torreSel, setTorreSel] = useState('');
+  const [unidadSelId, setUnidadSelId] = useState('');
+  const [telefonoContacto, setTelefonoContacto] = useState('');
+
   const [zonaId, setZonaId] = useState('');
   const [form, setForm] = useState(() => {
     const hoy = new Date().toISOString().split('T')[0];
     let nombre = '';
     let torre = '';
     let tipo = 'propietario';
+    let tel = '';
     if (typeof window !== 'undefined') {
       nombre = localStorage.getItem(STORAGE_KEYS.nombre) || '';
       torre = localStorage.getItem(STORAGE_KEYS.torre) || '';
       tipo = localStorage.getItem(STORAGE_KEYS.tipo) || 'propietario';
+      tel = localStorage.getItem(STORAGE_KEYS.telefono) || '';
     }
     return {
       nombreSolicitante: nombre,
@@ -66,6 +83,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
       fecha: hoy,
       horaInicio: '',
       tipo,
+      telefonoContacto: tel,
     };
   });
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad>({});
@@ -77,26 +95,55 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   const diaSinHorario = !!zonaSel && !!form.fecha && !horarioSel;
 
   useEffect(() => {
+    if (form.telefonoContacto) {
+      setTelefonoContacto(form.telefonoContacto);
+    }
+  }, [form.telefonoContacto]);
+
+  useEffect(() => {
     let active = true;
-    fetch(`${API_URL}/edificio/${edificioId}/zonas`)
-      .then((r) => r.json())
-      .then((data: Zona[]) => {
+    Promise.all([
+      fetch(`${API_URL}/edificio/${edificioId}/zonas`).then((r) => r.json()),
+      fetch(`${API_URL}/censo/public/${edificioId}/unidades`)
+        .then((r) => r.json())
+        .catch(() => []),
+    ])
+      .then(([dataZonas, dataCenso]) => {
         if (!active) return;
-        if (!Array.isArray(data) || data.length === 0) {
+        if (!Array.isArray(dataZonas) || dataZonas.length === 0) {
           setError('No hay zonas disponibles en este edificio');
         }
-        setZonas(data);
+        setZonas(dataZonas || []);
+
+        if (Array.isArray(dataCenso)) {
+          setUnidadesCenso(dataCenso);
+        }
       })
       .catch(() => {
-        if (active) setError('No se pudieron cargar las zonas');
+        if (active) setError('No se pudieron cargar los datos del edificio');
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          setCargandoCenso(false);
+        }
       });
+
     return () => {
       active = false;
     };
   }, [edificioId]);
+
+  const tieneTorres = unidadesCenso.some((u) => u.torre);
+  const torresDisponibles = Array.from(
+    new Set(unidadesCenso.map((u) => u.torre).filter(Boolean)),
+  ).sort() as string[];
+
+  const unidadesFiltradas = torreSel
+    ? unidadesCenso.filter((u) => u.torre === torreSel)
+    : unidadesCenso;
+
+  const unidadSeleccionada = unidadesCenso.find((u) => u._id === unidadSelId);
 
   const horaFinCalc =
     zonaSel && form.horaInicio
@@ -138,27 +185,47 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
       setError('Aforo completo en esta franja horaria');
       return;
     }
+
+    if (unidadesCenso.length > 0 && !unidadSelId) {
+      setError('Por favor selecciona tu apartamento o unidad censada');
+      return;
+    }
+
     setSaving(true);
     try {
+      const payload: Record<string, any> = {
+        zonaId,
+        fecha: form.fecha,
+        horaInicio: form.horaInicio,
+        nombreSolicitante: form.nombreSolicitante,
+      };
+
+      if (unidadesCenso.length > 0 && unidadSeleccionada) {
+        payload.censoUnidadId = unidadSeleccionada._id;
+        payload.torreInmueble = unidadSeleccionada.identificador;
+        payload.telefonoContacto = telefonoContacto;
+      } else {
+        payload.torreInmueble = form.torreInmueble;
+        payload.tipo = form.tipo;
+        payload.telefonoContacto = telefonoContacto;
+      }
+
       const res = await fetch(`${API_URL}/solicitudes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          zonaId,
-          fecha: form.fecha,
-          horaInicio: form.horaInicio,
-          nombreSolicitante: form.nombreSolicitante,
-          torreInmueble: form.torreInmueble,
-          tipo: form.tipo,
-        }),
+        body: JSON.stringify(payload),
       });
+
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Error al enviar solicitud');
       }
+
       localStorage.setItem(STORAGE_KEYS.nombre, form.nombreSolicitante);
-      localStorage.setItem(STORAGE_KEYS.torre, form.torreInmueble);
+      localStorage.setItem(STORAGE_KEYS.torre, payload.torreInmueble || '');
       localStorage.setItem(STORAGE_KEYS.tipo, form.tipo);
+      if (telefonoContacto) localStorage.setItem(STORAGE_KEYS.telefono, telefonoContacto);
+
       setSuccessData({
         zona: zonaSel?.nombre,
         fecha: form.fecha,
@@ -198,109 +265,158 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
           onClick={() => {
             setSuccess(false);
             setSuccessData(null);
-            setZonaId('');
-            setError('');
-            setDisponibilidad({});
-            setForm((prev) => ({
-              ...prev,
-              fecha: new Date().toISOString().split('T')[0],
-              horaInicio: '',
-            }));
           }}
         >
-          <span className="icon-[tabler--calendar-plus] text-lg" aria-hidden="true" />
-          Volver a reservar
+          Hacer otra solicitud
         </button>
       </div>
     );
   }
 
-  if (!zonas.length && error) {
-    return (
-      <div className="card bg-base-100 shadow-sm p-8 text-center max-w-md">
-        <h1 className="text-xl font-bold mb-2">Edificio no encontrado</h1>
-        <p className="text-base-content/60">{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="card bg-base-100 shadow-sm p-6 w-full max-w-md">
-      <h1 className="text-xl font-bold mb-4">Solicitar Turno</h1>
+    <div className="card bg-base-100 shadow-sm p-6 sm:p-8 max-w-lg w-full">
+      <div className="mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Reservar Zona Común</h1>
+        <p className="text-xs sm:text-sm text-base-content/60">
+          Elige la zona, fecha y horario de tu reserva
+        </p>
+      </div>
 
       {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Zona */}
         <label className="form-control">
-          <span className="label-text">Zona</span>
+          <span className="label-text">Zona común</span>
           <select
             className="select select-bordered"
+            required
             value={zonaId}
             onChange={(e) => {
-              const v = e.target.value;
-              setZonaId(v);
-              setForm((prev) => ({
-                ...prev,
-                horaInicio: '',
-                fecha: new Date().toISOString().split('T')[0],
-              }));
-              setDisponibilidad({});
+              const id = e.target.value;
+              setZonaId(id);
+              const z = zonas.find((item) => item._id === id) ?? null;
+              checkDisponibilidad(z, form.fecha, form.horaInicio);
             }}
-            required
           >
-            <option value="">Selecciona una zona</option>
+            <option value="">Selecciona una zona...</option>
             {zonas.map((z) => (
               <option key={z._id} value={z._id}>
-                {z.nombre}
+                {z.nombre} (Aforo: {z.aforoMaximo})
               </option>
             ))}
           </select>
         </label>
 
-        {zonaSel && (
-          <div className="flex flex-wrap gap-1 text-xs">
-            <span className={`badge badge-sm ${horarioSel ? 'badge-outline' : 'badge-error'}`}>
-              {horarioSel ? `${horarioSel.inicio} - ${horarioSel.fin}` : `No disponible los ${diaSel}`}
-            </span>
-            <span className="badge badge-outline badge-sm">Aforo: {zonaSel.aforoMaximo}</span>
-            <span className="badge badge-outline badge-sm">Lapso: {zonaSel.lapsoMinutos} min</span>
-          </div>
-        )}
+        {/* MODO CENSO (Selectores de Torre e Inmueble) vs MODO LEGACY */}
+        {!cargandoCenso && unidadesCenso.length > 0 ? (
+          <div className="bg-primary/5 border border-primary/20 rounded-box p-3.5 space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <span className="icon-[tabler--database-check] text-sm" />
+              <span>Inmueble Registrado en el Censo</span>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {tieneTorres && (
+                <label className="form-control">
+                  <span className="label-text text-xs">Torre *</span>
+                  <select
+                    className="select select-bordered select-sm w-full"
+                    value={torreSel}
+                    onChange={(e) => {
+                      setTorreSel(e.target.value);
+                      setUnidadSelId('');
+                    }}
+                    required
+                  >
+                    <option value="">Selecciona torre...</option>
+                    {torresDisponibles.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <label className="form-control">
+                <span className="label-text text-xs">Apartamento / Inmueble *</span>
+                <select
+                  className="select select-bordered select-sm w-full"
+                  value={unidadSelId}
+                  onChange={(e) => setUnidadSelId(e.target.value)}
+                  disabled={tieneTorres && !torreSel}
+                  required
+                >
+                  <option value="">Selecciona apartamento...</option>
+                  {unidadesFiltradas.map((u) => (
+                    <option key={u._id} value={u._id}>
+                      {u.identificador}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : !cargandoCenso && unidadesCenso.length === 0 ? (
+          /* MODO LEGACY (Campos abiertos) */
+          <>
+            <label className="form-control">
+              <span className="label-text">Torre / Inmueble</span>
+              <input
+                type="text"
+                className="input input-bordered"
+                required
+                placeholder="Ej: Torre 1 - 201"
+                value={form.torreInmueble}
+                onChange={(e) => setForm({ ...form, torreInmueble: e.target.value })}
+              />
+            </label>
+
+            <label className="form-control">
+              <span className="label-text">Condición</span>
+              <select
+                className="select select-bordered"
+                value={form.tipo}
+                onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+              >
+                <option value="propietario">Propietario</option>
+                <option value="arrendatario">Arrendatario</option>
+              </select>
+            </label>
+          </>
+        ) : null}
+
+        {/* Datos del Solicitante */}
         <label className="form-control">
-          <span className="label-text">Nombre</span>
+          <span className="label-text">Nombre del Solicitante *</span>
           <input
             type="text"
             className="input input-bordered"
             required
+            placeholder="Nombre completo"
             value={form.nombreSolicitante}
             onChange={(e) => setForm({ ...form, nombreSolicitante: e.target.value })}
           />
         </label>
 
         <label className="form-control">
-          <span className="label-text">Torre / Inmueble</span>
+          <span className="label-text">Teléfono de Contacto (opcional)</span>
           <input
-            type="text"
+            type="tel"
             className="input input-bordered"
-            required
-            value={form.torreInmueble}
-            onChange={(e) => setForm({ ...form, torreInmueble: e.target.value })}
+            placeholder="Ej: 3001234567"
+            value={telefonoContacto}
+            onChange={(e) => setTelefonoContacto(e.target.value)}
           />
+          <span className="label-text-alt text-base-content/60">
+            {unidadesCenso.length > 0
+              ? 'Se utilizará para verificar automáticamente tu estado de propietario o residente en el censo'
+              : 'Para notificaciones o confirmación de tu turno'}
+          </span>
         </label>
 
-        <label className="form-control">
-          <span className="label-text">Tipo</span>
-          <select
-            className="select select-bordered"
-            value={form.tipo}
-            onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-          >
-            <option value="propietario">Propietario</option>
-            <option value="arrendatario">Arrendatario</option>
-          </select>
-        </label>
-
+        {/* Fecha */}
         <label className="form-control">
           <span className="label-text">Fecha</span>
           <input
@@ -323,6 +439,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
           />
         </label>
 
+        {/* Hora */}
         <label className="form-control">
           <span className="label-text">Hora de inicio</span>
           <TimePicker
@@ -342,7 +459,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
               Tu turno será de <strong>{form.horaInicio}</strong> a <strong>{horaFinCalc}</strong>
               &nbsp;(lapso: {zonaSel.lapsoMinutos} min)
             </p>
-            <p className="text-base-content/50 italic">No es obligatorio usar todo el tiempo.</p>
+            <p className="text-base-content/50 italic text-xs">No es obligatorio usar todo el tiempo.</p>
           </div>
         )}
 

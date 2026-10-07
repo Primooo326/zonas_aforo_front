@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import calendarjs from '@calendarjs/ce';
 import '@calendarjs/ce/dist/style.css';
 import { apiFetch } from '@/lib/api';
@@ -20,6 +21,9 @@ interface Reserva {
   nombreSolicitante: string;
   torreInmueble: string;
   estado: string;
+  tipo?: string;
+  censoUnidadId?: string | { _id: string; identificador?: string };
+  esCensoVerificado?: boolean;
 }
 
 const PALETA = [
@@ -257,9 +261,24 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
               />
               <h3 className="font-bold text-lg">{detalle.zonaId?.nombre || 'Zona'}</h3>
             </div>
-            <div className="space-y-2 text-sm">
-              <p><strong>Solicitante:</strong> {detalle.nombreSolicitante}</p>
-              <p><strong>Torre/Inmueble:</strong> {detalle.torreInmueble || '—'}</p>
+            <div className="space-y-2.5 text-sm">
+              <p>
+                <strong>Solicitante:</strong> {detalle.nombreSolicitante}{' '}
+                {detalle.tipo && (
+                  <span className="text-xs text-base-content/60 capitalize">({detalle.tipo})</span>
+                )}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <strong>Torre/Inmueble:</strong>
+                <span>{detalle.torreInmueble || '—'}</span>
+                {detalle.esCensoVerificado ? (
+                  <span className="badge badge-success badge-xs gap-1">
+                    <span className="icon-[tabler--check] text-[10px]" /> Verificado
+                  </span>
+                ) : (
+                  <span className="badge badge-ghost badge-xs text-base-content/50">Manual</span>
+                )}
+              </div>
               <p><strong>Fecha:</strong> {detalle.fecha}</p>
               <p><strong>Horario:</strong> {detalle.horaInicio} - {detalle.horaFin}</p>
               <p>
@@ -268,6 +287,17 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
                   {detalle.estado === 'activa' ? 'Activa' : 'Cancelada'}
                 </span>
               </p>
+              {detalle.censoUnidadId && (
+                <div className="pt-2">
+                  <Link
+                    href={`/dashboard/censo/${typeof detalle.censoUnidadId === 'object' ? detalle.censoUnidadId._id : detalle.censoUnidadId}`}
+                    className="btn btn-xs btn-outline btn-primary gap-1"
+                  >
+                    <span className="icon-[tabler--user-check] text-xs" />
+                    Ver Ficha de Censo de la Unidad
+                  </Link>
+                </div>
+              )}
             </div>
             <div className="modal-action">
               <button className="btn" onClick={() => setDetalle(null)}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 interface Zona {
   _id: string;
@@ -17,6 +18,9 @@ interface Reserva {
   nombreSolicitante: string;
   torreInmueble: string;
   estado: string;
+  tipo?: string;
+  censoUnidadId?: string | { _id: string; identificador?: string };
+  esCensoVerificado?: boolean;
 }
 
 function nivelAforo(pct: number) {
@@ -170,7 +174,7 @@ export default function ReservasDia({
                   <tr>
                     <th>Zona</th>
                     <th>Solicitante</th>
-                    <th>Torre</th>
+                    <th>Inmueble / Censo</th>
                     <th>Hora</th>
                     <th>Estado</th>
                   </tr>
@@ -178,9 +182,36 @@ export default function ReservasDia({
                 <tbody>
                   {reservas.map((r) => (
                     <tr key={r._id}>
-                      <td>{r.zonaId?.nombre || '—'}</td>
-                      <td>{r.nombreSolicitante}</td>
-                      <td>{r.torreInmueble}</td>
+                      <td className="font-semibold">{r.zonaId?.nombre || '—'}</td>
+                      <td>
+                        <div className="font-medium">{r.nombreSolicitante}</div>
+                        {r.tipo && (
+                          <span className="text-[11px] text-base-content/60 capitalize">
+                            {r.tipo}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{r.torreInmueble}</span>
+                          {r.esCensoVerificado ? (
+                            <span className="badge badge-success badge-xs gap-0.5" title="Residente verificado en el censo">
+                              <span className="icon-[tabler--check] text-[10px]" /> Verificado
+                            </span>
+                          ) : (
+                            <span className="badge badge-ghost badge-xs text-base-content/50">Manual</span>
+                          )}
+                          {r.censoUnidadId && (
+                            <Link
+                              href={`/dashboard/censo/${typeof r.censoUnidadId === 'object' ? r.censoUnidadId._id : r.censoUnidadId}`}
+                              className="link link-hover text-primary text-xs font-medium ml-1"
+                              title="Ver ficha de censo de la unidad"
+                            >
+                              Ver Ficha
+                            </Link>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         {r.horaInicio} - {r.horaFin}
                       </td>
