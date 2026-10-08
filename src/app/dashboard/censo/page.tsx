@@ -10,6 +10,7 @@ import {
   calcularEdad,
   categorizarEdad,
   exportarCensoXLSX,
+  Vehiculo,
 } from '@/lib/censo-helpers';
 import ModalCargaExcel from '@/components/censo/ModalCargaExcel';
 
@@ -73,24 +74,35 @@ export default function CensoDashboardPage() {
   // Tab activo
   const [activeTab, setActiveTab] = useState<TabType>('inmuebles');
 
-  // Filtros Inmuebles
+  // Filtros y Orden Inmuebles
   const [search, setSearch] = useState('');
+  const [filtroTorreInmuebles, setFiltroTorreInmuebles] = useState('todos');
+  const [filtroOcupacionInmuebles, setFiltroOcupacionInmuebles] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [filtroEspecial, setFiltroEspecial] = useState('todos');
+  const [ordenInmuebles, setOrdenInmuebles] = useState('identificador_asc');
 
-  // Filtros Residentes
+  // Filtros y Orden Residentes
   const [searchResidente, setSearchResidente] = useState('');
+  const [filtroTorreResidentes, setFiltroTorreResidentes] = useState('todos');
   const [filtroCondicionResidente, setFiltroCondicionResidente] = useState('todos');
   const [filtroGrupoEtarioResidente, setFiltroGrupoEtarioResidente] = useState('todos');
   const [filtroContactoPrincipal, setFiltroContactoPrincipal] = useState('todos');
+  const [ordenResidentes, setOrdenResidentes] = useState('nombre_asc');
 
-  // Filtros Parqueaderos
+  // Filtros y Orden Parqueaderos
   const [searchParq, setSearchParq] = useState('');
+  const [filtroTorreParq, setFiltroTorreParq] = useState('todos');
   const [filtroTipoParq, setFiltroTipoParq] = useState('todos');
   const [filtroModoParq, setFiltroModoParq] = useState('todos');
+  const [filtroAsignacionParq, setFiltroAsignacionParq] = useState('todos');
+  const [ordenParq, setOrdenParq] = useState('numero_asc');
 
-  // Filtros Bodegas
+  // Filtros y Orden Bodegas
   const [searchBodega, setSearchBodega] = useState('');
+  const [filtroTorreBodega, setFiltroTorreBodega] = useState('todos');
+  const [filtroAsignacionBodega, setFiltroAsignacionBodega] = useState('todos');
+  const [ordenBodegas, setOrdenBodegas] = useState('numero_asc');
 
   // Modal QR
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -197,9 +209,121 @@ export default function CensoDashboardPage() {
     }
   };
 
-  // Filtrado de Unidades
+  // Lista dinámica de torres disponibles en el conjunto
+  const torresDisponibles = useMemo(() => {
+    const setTorres = new Set<string>();
+    unidades.forEach((u) => {
+      if (u.torre?.trim()) setTorres.add(u.torre.trim());
+    });
+    parqueaderos.forEach((p) => {
+      if (p.torreAsignada?.trim()) setTorres.add(p.torreAsignada.trim());
+    });
+    bodegas.forEach((b) => {
+      if (b.torreAsignada?.trim()) setTorres.add(b.torreAsignada.trim());
+    });
+    return Array.from(setTorres).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }),
+    );
+  }, [unidades, parqueaderos, bodegas]);
+
+  // Mapas de relación en memoria para vincular Parqueaderos y Bodegas con Inmuebles y Vehículos
+  const { mapaUnidadesPorParq, mapaVehiculosPorParq, mapaUnidadesPorBodega } = useMemo(() => {
+    const mapaUnidadesPorParq = new Map<string, CensoUnidad>();
+    const mapaVehiculosPorParq = new Map<string, Vehiculo>();
+    const mapaUnidadesPorBodega = new Map<string, CensoUnidad>();
+    const mapaPorTorreApto = new Map<string, CensoUnidad>();
+
+    for (const u of unidades) {
+      if (u.torre && u.numeroApto) {
+        const key = `${u.torre.trim().toLowerCase()}:::${u.numeroApto.trim().toLowerCase()}`;
+        mapaPorTorreApto.set(key, u);
+      }
+      if (u.numeroApto) {
+        mapaPorTorreApto.set(u.numeroApto.trim().toLowerCase(), u);
+      }
+
+      // Asignaciones directas en la unidad
+      for (const p of u.parqueaderosAsignados || []) {
+        if (p.numero?.trim()) {
+          mapaUnidadesPorParq.set(p.numero.trim().toUpperCase(), u);
+        }
+      }
+
+      for (const b of u.bodegasAsignadas || []) {
+        if (b.numero?.trim()) {
+          mapaUnidadesPorBodega.set(b.numero.trim().toUpperCase(), u);
+        }
+      }
+
+      // Vehículos con cupo explícito
+      for (const v of u.vehiculos || []) {
+        if (v.numeroParqueadero?.trim()) {
+          mapaVehiculosPorParq.set(v.numeroParqueadero.trim().toUpperCase(), v);
+        }
+      }
+    }
+
+    // Complementar con inventario de parqueaderos
+    for (const p of parqueaderos) {
+      const num = p.numero.trim().toUpperCase();
+      if (!mapaUnidadesPorParq.has(num)) {
+        if (p.torreAsignada && p.aptoAsignado) {
+          const key = `${p.torreAsignada.trim().toLowerCase()}:::${p.aptoAsignado.trim().toLowerCase()}`;
+          const u = mapaPorTorreApto.get(key);
+          if (u) mapaUnidadesPorParq.set(num, u);
+        } else if (p.aptoAsignado) {
+          const u = mapaPorTorreApto.get(p.aptoAsignado.trim().toLowerCase());
+          if (u) mapaUnidadesPorParq.set(num, u);
+        }
+      }
+
+      // Si no hay vehículo explícito asignado por placa, buscar vehículo de la unidad que parquée adentro
+      if (!mapaVehiculosPorParq.has(num)) {
+        const u = mapaUnidadesPorParq.get(num);
+        if (u && u.vehiculos && u.vehiculos.length > 0) {
+          const candidatos = u.vehiculos.filter((v) => {
+            if (!v.numeroParqueadero) return true;
+            return v.numeroParqueadero.trim().toUpperCase() === num;
+          });
+          const tipoCupo = (p.tipo || 'carro').toLowerCase();
+          const coincidente =
+            candidatos.find((v) => (v.tipo || 'carro').toLowerCase() === tipoCupo) || candidatos[0];
+          if (coincidente) {
+            mapaVehiculosPorParq.set(num, coincidente);
+          }
+        }
+      }
+    }
+
+    // Complementar con inventario de bodegas
+    for (const b of bodegas) {
+      const num = b.numero.trim().toUpperCase();
+      if (!mapaUnidadesPorBodega.has(num)) {
+        if (b.torreAsignada && b.aptoAsignado) {
+          const key = `${b.torreAsignada.trim().toLowerCase()}:::${b.aptoAsignado.trim().toLowerCase()}`;
+          const u = mapaPorTorreApto.get(key);
+          if (u) mapaUnidadesPorBodega.set(num, u);
+        } else if (b.aptoAsignado) {
+          const u = mapaPorTorreApto.get(b.aptoAsignado.trim().toLowerCase());
+          if (u) mapaUnidadesPorBodega.set(num, u);
+        }
+      }
+    }
+
+    return { mapaUnidadesPorParq, mapaVehiculosPorParq, mapaUnidadesPorBodega };
+  }, [unidades, parqueaderos, bodegas]);
+
+  // Filtrado y Ordenamiento de Unidades
   const unidadesFiltradas = useMemo(() => {
-    return unidades.filter((u) => {
+    const filtradas = unidades.filter((u) => {
+      if (filtroTorreInmuebles !== 'todos' && u.torre?.trim() !== filtroTorreInmuebles) {
+        return false;
+      }
+
+      if (filtroOcupacionInmuebles !== 'todos' && u.tipoOcupacion !== filtroOcupacionInmuebles) {
+        return false;
+      }
+
       if (filtroEstado !== 'todos') {
         if (filtroEstado === 'pendientes' && u.estado !== 'pendiente' && u.estado !== 'pendiente_actualizacion') {
           return false;
@@ -229,20 +353,62 @@ export default function CensoDashboardPage() {
       if (search.trim()) {
         const term = search.trim().toLowerCase();
         const matchIdentificador = u.identificador?.toLowerCase().includes(term);
+        const matchTorre = u.torre?.toLowerCase().includes(term);
+        const matchApto = u.numeroApto?.toLowerCase().includes(term);
         const matchPersona = u.personas?.some(
           (p) =>
             p.nombreCompleto?.toLowerCase().includes(term) ||
-            p.telefono?.toLowerCase().includes(term),
+            p.telefono?.toLowerCase().includes(term) ||
+            p.documento?.toLowerCase().includes(term),
         );
         const matchVehiculo = u.vehiculos?.some((v) => v.placa?.toLowerCase().includes(term));
-        if (!matchIdentificador && !matchPersona && !matchVehiculo) {
+        if (!matchIdentificador && !matchTorre && !matchApto && !matchPersona && !matchVehiculo) {
           return false;
         }
       }
 
       return true;
     });
-  }, [unidades, search, filtroEstado, filtroEspecial]);
+
+    filtradas.sort((a, b) => {
+      switch (ordenInmuebles) {
+        case 'identificador_desc':
+          return b.identificador.localeCompare(a.identificador, undefined, { numeric: true });
+        case 'torre_asc':
+          return (
+            (a.torre || '').localeCompare(b.torre || '', undefined, { numeric: true }) ||
+            (a.numeroApto || '').localeCompare(b.numeroApto || '', undefined, { numeric: true })
+          );
+        case 'piso_asc':
+          return (a.piso ?? 0) - (b.piso ?? 0);
+        case 'piso_desc':
+          return (b.piso ?? 0) - (a.piso ?? 0);
+        case 'metros_desc':
+          return (b.metrosCuadrados ?? 0) - (a.metrosCuadrados ?? 0);
+        case 'metros_asc':
+          return (a.metrosCuadrados ?? 0) - (b.metrosCuadrados ?? 0);
+        case 'personas_desc':
+          return (b.personas?.length ?? 0) - (a.personas?.length ?? 0);
+        case 'mascotas_desc':
+          return (b.mascotas?.length ?? 0) - (a.mascotas?.length ?? 0);
+        case 'vehiculos_desc':
+          return (b.vehiculos?.length ?? 0) - (a.vehiculos?.length ?? 0);
+        case 'identificador_asc':
+        default:
+          return a.identificador.localeCompare(b.identificador, undefined, { numeric: true });
+      }
+    });
+
+    return filtradas;
+  }, [
+    unidades,
+    search,
+    filtroTorreInmuebles,
+    filtroOcupacionInmuebles,
+    filtroEstado,
+    filtroEspecial,
+    ordenInmuebles,
+  ]);
 
   // Aplanamiento de Residentes
   const todosResidentes = useMemo<ResidenteFila[]>(() => {
@@ -271,9 +437,12 @@ export default function CensoDashboardPage() {
     return lista;
   }, [unidades]);
 
-  // Filtrado de Residentes
+  // Filtrado y Ordenamiento de Residentes
   const residentesFiltrados = useMemo(() => {
-    return todosResidentes.filter((r) => {
+    const filtrados = todosResidentes.filter((r) => {
+      if (filtroTorreResidentes !== 'todos' && r.torre?.trim() !== filtroTorreResidentes) {
+        return false;
+      }
       if (filtroCondicionResidente !== 'todos' && r.condicion !== filtroCondicionResidente) {
         return false;
       }
@@ -298,7 +467,35 @@ export default function CensoDashboardPage() {
       }
       return true;
     });
-  }, [todosResidentes, searchResidente, filtroCondicionResidente, filtroGrupoEtarioResidente, filtroContactoPrincipal]);
+
+    filtrados.sort((a, b) => {
+      switch (ordenResidentes) {
+        case 'nombre_desc':
+          return b.nombreCompleto.localeCompare(a.nombreCompleto);
+        case 'edad_asc':
+          return (a.edad ?? 999) - (b.edad ?? 999);
+        case 'edad_desc':
+          return (b.edad ?? -1) - (a.edad ?? -1);
+        case 'unidad_asc':
+          return a.identificador.localeCompare(b.identificador, undefined, { numeric: true });
+        case 'condicion_asc':
+          return a.condicion.localeCompare(b.condicion);
+        case 'nombre_asc':
+        default:
+          return a.nombreCompleto.localeCompare(b.nombreCompleto);
+      }
+    });
+
+    return filtrados;
+  }, [
+    todosResidentes,
+    searchResidente,
+    filtroTorreResidentes,
+    filtroCondicionResidente,
+    filtroGrupoEtarioResidente,
+    filtroContactoPrincipal,
+    ordenResidentes,
+  ]);
 
   // Métricas de Residentes
   const statsResidentes = useMemo(() => {
@@ -311,9 +508,19 @@ export default function CensoDashboardPage() {
     return { total, propietarios, arrendatarios, convivientes, menores, adultosMayores };
   }, [todosResidentes]);
 
-  // Filtrado de Parqueaderos
+  // Filtrado y Ordenamiento de Parqueaderos
   const parqueaderosFiltrados = useMemo(() => {
-    return parqueaderos.filter((p) => {
+    const filtrados = parqueaderos.filter((p) => {
+      const num = p.numero.trim().toUpperCase();
+      const u = mapaUnidadesPorParq.get(num);
+      const tieneUnidad = Boolean(p.aptoAsignado || p.torreAsignada || u);
+      const tieneVehiculo = mapaVehiculosPorParq.has(num);
+
+      if (filtroTorreParq !== 'todos') {
+        const torreParq = p.torreAsignada?.trim() || u?.torre?.trim();
+        if (torreParq !== filtroTorreParq) return false;
+      }
+
       if (filtroTipoParq !== 'todos' && p.tipo?.toLowerCase() !== filtroTipoParq.toLowerCase()) {
         return false;
       }
@@ -322,32 +529,140 @@ export default function CensoDashboardPage() {
       if (filtroModoParq === 'privados' && p.esVisitante) return false;
       if (filtroModoParq === 'cubiertos' && !p.esCubierto) return false;
 
+      if (filtroAsignacionParq === 'asignados' && !tieneUnidad) return false;
+      if (filtroAsignacionParq === 'libres' && (tieneUnidad || p.esVisitante)) return false;
+      if (filtroAsignacionParq === 'visitantes' && !p.esVisitante) return false;
+      if (filtroAsignacionParq === 'con_vehiculo' && !tieneVehiculo) return false;
+      if (filtroAsignacionParq === 'sin_vehiculo' && (tieneVehiculo || p.esVisitante)) return false;
+
       if (searchParq.trim()) {
         const term = searchParq.trim().toLowerCase();
         const matchNum = p.numero?.toLowerCase().includes(term);
-        const matchTorre = p.torreAsignada?.toLowerCase().includes(term);
-        const matchApto = p.aptoAsignado?.toLowerCase().includes(term);
-        if (!matchNum && !matchTorre && !matchApto) return false;
+        const matchTorre = (p.torreAsignada || u?.torre)?.toLowerCase().includes(term);
+        const matchApto = (p.aptoAsignado || u?.numeroApto)?.toLowerCase().includes(term);
+        const veh = mapaVehiculosPorParq.get(num);
+        const matchPlaca = veh?.placa?.toLowerCase().includes(term);
+        const matchMarca = veh?.marca?.toLowerCase().includes(term);
+        if (!matchNum && !matchTorre && !matchApto && !matchPlaca && !matchMarca) return false;
       }
 
       return true;
     });
-  }, [parqueaderos, searchParq, filtroTipoParq, filtroModoParq]);
 
-  // Filtrado de Bodegas
+    filtrados.sort((a, b) => {
+      const numA = a.numero.trim().toUpperCase();
+      const numB = b.numero.trim().toUpperCase();
+      switch (ordenParq) {
+        case 'numero_desc':
+          return b.numero.localeCompare(a.numero, undefined, { numeric: true });
+        case 'tipo_asc':
+          return (
+            (a.tipo || '').localeCompare(b.tipo || '') ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        case 'unidad_asc': {
+          const uA = a.aptoAsignado || a.torreAsignada ? `${a.torreAsignada || ''} ${a.aptoAsignado || ''}` : 'ZZZ';
+          const uB = b.aptoAsignado || b.torreAsignada ? `${b.torreAsignada || ''} ${b.aptoAsignado || ''}` : 'ZZZ';
+          return (
+            uA.localeCompare(uB, undefined, { numeric: true }) ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        }
+        case 'placa_asc': {
+          const pA = mapaVehiculosPorParq.get(numA)?.placa || 'ZZZ';
+          const pB = mapaVehiculosPorParq.get(numB)?.placa || 'ZZZ';
+          return (
+            pA.localeCompare(pB) ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        }
+        case 'numero_asc':
+        default:
+          return a.numero.localeCompare(b.numero, undefined, { numeric: true });
+      }
+    });
+
+    return filtrados;
+  }, [
+    parqueaderos,
+    searchParq,
+    filtroTorreParq,
+    filtroTipoParq,
+    filtroModoParq,
+    filtroAsignacionParq,
+    ordenParq,
+    mapaUnidadesPorParq,
+    mapaVehiculosPorParq,
+  ]);
+
+  // Filtrado y Ordenamiento de Bodegas
   const bodegasFiltradas = useMemo(() => {
-    return bodegas.filter((b) => {
+    const filtradas = bodegas.filter((b) => {
+      const num = b.numero.trim().toUpperCase();
+      const u = mapaUnidadesPorBodega.get(num);
+      const tieneUnidad = Boolean(b.aptoAsignado || b.torreAsignada || u);
+
+      if (filtroTorreBodega !== 'todos') {
+        const torreBod = b.torreAsignada?.trim() || u?.torre?.trim();
+        if (torreBod !== filtroTorreBodega) return false;
+      }
+
+      if (filtroAsignacionBodega === 'asignadas' && !tieneUnidad) return false;
+      if (filtroAsignacionBodega === 'libres' && tieneUnidad) return false;
+
       if (searchBodega.trim()) {
         const term = searchBodega.trim().toLowerCase();
         const matchNum = b.numero?.toLowerCase().includes(term);
         const matchUbicacion = b.ubicacion?.toLowerCase().includes(term);
-        const matchTorre = b.torreAsignada?.toLowerCase().includes(term);
-        const matchApto = b.aptoAsignado?.toLowerCase().includes(term);
+        const matchTorre = (b.torreAsignada || u?.torre)?.toLowerCase().includes(term);
+        const matchApto = (b.aptoAsignado || u?.numeroApto)?.toLowerCase().includes(term);
         if (!matchNum && !matchUbicacion && !matchTorre && !matchApto) return false;
       }
       return true;
     });
-  }, [bodegas, searchBodega]);
+
+    filtradas.sort((a, b) => {
+      switch (ordenBodegas) {
+        case 'numero_desc':
+          return b.numero.localeCompare(a.numero, undefined, { numeric: true });
+        case 'area_desc':
+          return (
+            (b.metrosCuadrados ?? 0) - (a.metrosCuadrados ?? 0) ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        case 'area_asc':
+          return (
+            (a.metrosCuadrados ?? 0) - (b.metrosCuadrados ?? 0) ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        case 'unidad_asc': {
+          const uA = b.aptoAsignado || b.torreAsignada ? `${b.torreAsignada || ''} ${b.aptoAsignado || ''}` : 'ZZZ';
+          const uB = b.aptoAsignado || b.torreAsignada ? `${b.torreAsignada || ''} ${b.aptoAsignado || ''}` : 'ZZZ';
+          return (
+            uA.localeCompare(uB, undefined, { numeric: true }) ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        }
+        case 'ubicacion_asc':
+          return (
+            (a.ubicacion || '').localeCompare(b.ubicacion || '') ||
+            a.numero.localeCompare(b.numero, undefined, { numeric: true })
+          );
+        case 'numero_asc':
+        default:
+          return a.numero.localeCompare(b.numero, undefined, { numeric: true });
+      }
+    });
+
+    return filtradas;
+  }, [
+    bodegas,
+    searchBodega,
+    filtroTorreBodega,
+    filtroAsignacionBodega,
+    ordenBodegas,
+    mapaUnidadesPorBodega,
+  ]);
 
   // Métricas de Parqueaderos
   const statsParq = useMemo(() => {
@@ -607,18 +922,41 @@ export default function CensoDashboardPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar por placa vehicular, apartamento, nombre o teléfono..."
+                  placeholder="Buscar por placa vehicular, apartamento, torre, nombre o teléfono..."
                   className="input input-sm w-full pl-9 text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {torresDisponibles.length > 0 && (
+                  <select
+                    value={filtroTorreInmuebles}
+                    onChange={(e) => setFiltroTorreInmuebles(e.target.value)}
+                    className="select select-sm text-xs w-full"
+                  >
+                    <option value="todos">Torre: Todas</option>
+                    {torresDisponibles.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
+
+                <select
+                  value={filtroOcupacionInmuebles}
+                  onChange={(e) => setFiltroOcupacionInmuebles(e.target.value)}
+                  className="select select-sm text-xs w-full"
+                >
+                  <option value="todos">Ocupación: Todas</option>
+                  <option value="habitada">Habitada</option>
+                  <option value="desocupada">Desocupada</option>
+                </select>
+
                 <select
                   value={filtroEstado}
                   onChange={(e) => setFiltroEstado(e.target.value)}
                   className="select select-sm text-xs w-full"
                 >
-                  <option value="todos">Estado: Todos</option>
+                  <option value="todos">Aprobación: Todos</option>
                   <option value="aprobados">Solo Aprobados</option>
                   <option value="pendientes">Solo Pendientes</option>
                 </select>
@@ -628,11 +966,28 @@ export default function CensoDashboardPage() {
                   onChange={(e) => setFiltroEspecial(e.target.value)}
                   className="select select-sm text-xs w-full"
                 >
-                  <option value="todos">Filtro demográfico: Todos</option>
-                  <option value="con_menores">🧒 Con menores de edad</option>
+                  <option value="todos">Demografía: Todos</option>
+                  <option value="con_menores">🧒 Con menores</option>
                   <option value="con_mayores">🧓 Con adultos mayores</option>
-                  <option value="mascotas_peligrosas">🐾 Con razas de manejo especial</option>
-                  <option value="arrendatarios">📄 Con arrendatarios</option>
+                  <option value="mascotas_peligrosas">🐾 Manejo especial</option>
+                  <option value="arrendatarios">📄 Arrendatarios</option>
+                </select>
+
+                <select
+                  value={ordenInmuebles}
+                  onChange={(e) => setOrdenInmuebles(e.target.value)}
+                  className="select select-sm text-xs w-full font-medium"
+                >
+                  <option value="identificador_asc">Orden: Apto (Ascendente)</option>
+                  <option value="identificador_desc">Orden: Apto (Descendente)</option>
+                  <option value="torre_asc">Orden: Por Torre</option>
+                  <option value="piso_asc">Orden: Piso (Menor a Mayor)</option>
+                  <option value="piso_desc">Orden: Piso (Mayor a Menor)</option>
+                  <option value="metros_desc">Orden: Mayor Área</option>
+                  <option value="metros_asc">Orden: Menor Área</option>
+                  <option value="personas_desc">Orden: Más Residentes</option>
+                  <option value="mascotas_desc">Orden: Más Mascotas</option>
+                  <option value="vehiculos_desc">Orden: Más Vehículos</option>
                 </select>
               </div>
             </div>
@@ -910,7 +1265,20 @@ export default function CensoDashboardPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {torresDisponibles.length > 0 && (
+                  <select
+                    value={filtroTorreResidentes}
+                    onChange={(e) => setFiltroTorreResidentes(e.target.value)}
+                    className="select select-sm text-xs w-full"
+                  >
+                    <option value="todos">Torre: Todas</option>
+                    {torresDisponibles.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
+
                 <select
                   value={filtroCondicionResidente}
                   onChange={(e) => setFiltroCondicionResidente(e.target.value)}
@@ -940,6 +1308,19 @@ export default function CensoDashboardPage() {
                 >
                   <option value="todos">Contactos: Todos</option>
                   <option value="solo_principales">★ Solo Principal</option>
+                </select>
+
+                <select
+                  value={ordenResidentes}
+                  onChange={(e) => setOrdenResidentes(e.target.value)}
+                  className="select select-sm text-xs w-full font-medium"
+                >
+                  <option value="nombre_asc">Orden: Nombre (A - Z)</option>
+                  <option value="nombre_desc">Orden: Nombre (Z - A)</option>
+                  <option value="unidad_asc">Orden: Por Apto / Torre</option>
+                  <option value="edad_asc">Orden: Menor a Mayor Edad</option>
+                  <option value="edad_desc">Orden: Mayor a Menor Edad</option>
+                  <option value="condicion_asc">Orden: Por Condición</option>
                 </select>
               </div>
             </div>
@@ -1150,12 +1531,25 @@ export default function CensoDashboardPage() {
                   type="text"
                   value={searchParq}
                   onChange={(e) => setSearchParq(e.target.value)}
-                  placeholder="Buscar por número (ej. P-101), torre o apartamento..."
+                  placeholder="Buscar por número (ej. P-101), torre, apartamento, placa o vehículo..."
                   className="input input-sm w-full pl-9 text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {torresDisponibles.length > 0 && (
+                  <select
+                    value={filtroTorreParq}
+                    onChange={(e) => setFiltroTorreParq(e.target.value)}
+                    className="select select-sm text-xs w-full"
+                  >
+                    <option value="todos">Torre: Todas</option>
+                    {torresDisponibles.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
+
                 <select
                   value={filtroTipoParq}
                   onChange={(e) => setFiltroTipoParq(e.target.value)}
@@ -1177,6 +1571,30 @@ export default function CensoDashboardPage() {
                   <option value="visitantes">Solo Visitantes</option>
                   <option value="cubiertos">Solo Cubiertos</option>
                 </select>
+
+                <select
+                  value={filtroAsignacionParq}
+                  onChange={(e) => setFiltroAsignacionParq(e.target.value)}
+                  className="select select-sm text-xs w-full"
+                >
+                  <option value="todos">Asignación: Todos</option>
+                  <option value="asignados">Asignados a Vivienda</option>
+                  <option value="libres">Libres / Sin Asignar</option>
+                  <option value="con_vehiculo">Con Vehículo</option>
+                  <option value="sin_vehiculo">Sin Vehículo</option>
+                </select>
+
+                <select
+                  value={ordenParq}
+                  onChange={(e) => setOrdenParq(e.target.value)}
+                  className="select select-sm text-xs w-full font-medium"
+                >
+                  <option value="numero_asc">Orden: Número (1 - 9 / A - Z)</option>
+                  <option value="numero_desc">Orden: Número (9 - 1 / Z - A)</option>
+                  <option value="tipo_asc">Orden: Por Tipo de Cupo</option>
+                  <option value="unidad_asc">Orden: Por Unidad / Apto</option>
+                  <option value="placa_asc">Orden: Por Placa Vehicular</option>
+                </select>
               </div>
             </div>
           </div>
@@ -1197,59 +1615,140 @@ export default function CensoDashboardPage() {
                       <th>Modalidad</th>
                       <th>Cubierto</th>
                       <th>Asignado a Unidad</th>
+                      <th>Vehículo Asignado</th>
+                      <th className="text-right">Ficha</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parqueaderosFiltrados.map((p) => (
-                      <tr key={p._id}>
-                        <td>
-                          <span className="font-mono font-bold text-sm text-primary">
-                            {p.numero}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="inline-flex items-center gap-1.5 capitalize text-xs">
-                            {p.tipo === 'moto' ? (
-                              <span className="icon-[tabler--motorbike] text-base text-accent" />
-                            ) : p.tipo === 'bicicleta' ? (
-                              <span className="icon-[tabler--bike] text-base text-info" />
+                    {parqueaderosFiltrados.map((p) => {
+                      const num = p.numero.trim().toUpperCase();
+                      const vehiculo = mapaVehiculosPorParq.get(num);
+                      const u = mapaUnidadesPorParq.get(num);
+
+                      return (
+                        <tr key={p._id}>
+                          <td>
+                            <span className="font-mono font-bold text-sm text-primary">
+                              {p.numero}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="inline-flex items-center gap-1.5 capitalize text-xs">
+                              {p.tipo === 'moto' ? (
+                                <span className="icon-[tabler--motorbike] text-base text-accent" />
+                              ) : p.tipo === 'bicicleta' ? (
+                                <span className="icon-[tabler--bike] text-base text-info" />
+                              ) : (
+                                <span className="icon-[tabler--car] text-base text-primary" />
+                              )}
+                              {p.tipo || 'Carro'}
+                            </span>
+                          </td>
+                          <td>
+                            {p.esVisitante ? (
+                              <span className="badge badge-xs badge-soft badge-warning font-semibold">
+                                Visitante
+                              </span>
                             ) : (
-                              <span className="icon-[tabler--car] text-base text-primary" />
+                              <span className="badge badge-xs badge-soft badge-success font-semibold">
+                                Privado
+                              </span>
                             )}
-                            {p.tipo || 'Carro'}
-                          </span>
-                        </td>
-                        <td>
-                          {p.esVisitante ? (
-                            <span className="badge badge-xs badge-soft badge-warning font-semibold">
-                              Visitante
-                            </span>
-                          ) : (
-                            <span className="badge badge-xs badge-soft badge-success font-semibold">
-                              Privado
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          {p.esCubierto ? (
-                            <span className="badge badge-xs badge-soft badge-info">Cubierto</span>
-                          ) : (
-                            <span className="badge badge-xs badge-soft badge-ghost">Descubierto</span>
-                          )}
-                        </td>
-                        <td>
-                          {p.aptoAsignado || p.torreAsignada ? (
-                            <div className="text-xs font-semibold text-base-content">
-                              {p.torreAsignada ? `${p.torreAsignada} - ` : ''}Apto {p.aptoAsignado}
-                            </div>
-                          ) : p.esVisitante ? (
-                            <span className="text-xs text-base-content/50 italic">Uso común visitantes</span>
-                          ) : (
-                            <span className="text-xs text-base-content/50 italic">Sin unidad asignada</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td>
+                            {p.esCubierto ? (
+                              <span className="badge badge-xs badge-soft badge-info">Cubierto</span>
+                            ) : (
+                              <span className="badge badge-xs badge-soft badge-ghost">Descubierto</span>
+                            )}
+                          </td>
+                          <td>
+                            {u ? (
+                              <Link
+                                href={`/dashboard/censo/${u._id}`}
+                                className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                {p.torreAsignada ? `${p.torreAsignada} - ` : u.torre ? `${u.torre} - ` : ''}
+                                Apto {p.aptoAsignado || u.numeroApto}
+                              </Link>
+                            ) : p.aptoAsignado || p.torreAsignada ? (
+                              <div className="text-xs font-semibold text-base-content">
+                                {p.torreAsignada ? `${p.torreAsignada} - ` : ''}Apto {p.aptoAsignado}
+                              </div>
+                            ) : p.esVisitante ? (
+                              <span className="text-xs text-base-content/50 italic">Uso común visitantes</span>
+                            ) : (
+                              <span className="text-xs text-base-content/50 italic">Sin unidad asignada</span>
+                            )}
+                          </td>
+                          <td>
+                            {vehiculo ? (
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded border ${
+                                      vehiculo.tipo === 'moto'
+                                        ? 'bg-accent/10 border-accent/30 text-accent'
+                                        : vehiculo.tipo === 'bicicleta'
+                                          ? 'bg-info/10 border-info/30 text-info'
+                                          : 'bg-primary/10 border-primary/30 text-primary'
+                                    }`}
+                                  >
+                                    {vehiculo.tipo === 'moto' ? (
+                                      <span className="icon-[tabler--motorbike] text-sm" />
+                                    ) : vehiculo.tipo === 'bicicleta' ? (
+                                      <span className="icon-[tabler--bike] text-sm" />
+                                    ) : (
+                                      <span className="icon-[tabler--car] text-sm" />
+                                    )}
+                                    {vehiculo.placa}
+                                  </span>
+                                  <span className="text-3xs uppercase tracking-wider text-base-content/60 font-semibold">
+                                    {vehiculo.tipo}
+                                  </span>
+                                </div>
+                                {(vehiculo.marca || vehiculo.modelo || vehiculo.color) && (
+                                  <div className="text-2xs text-base-content/60 truncate max-w-xs">
+                                    {[vehiculo.marca, vehiculo.modelo, vehiculo.color].filter(Boolean).join(' • ')}
+                                  </div>
+                                )}
+                              </div>
+                            ) : p.esVisitante ? (
+                              <span className="badge badge-xs badge-soft badge-warning font-semibold">
+                                Uso común visitantes
+                              </span>
+                            ) : u ? (
+                              <span className="badge badge-xs badge-soft badge-ghost text-base-content/50">
+                                Sin vehículo registrado
+                              </span>
+                            ) : (
+                              <span className="badge badge-xs badge-soft badge-neutral text-base-content/40">
+                                Cupo libre
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-right">
+                            {u ? (
+                              <Link
+                                href={`/dashboard/censo/${u._id}`}
+                                className="btn btn-square btn-ghost btn-xs text-info"
+                                title={`Ver ficha de la vivienda (${u.identificador})`}
+                              >
+                                <span className="icon-[tabler--eye] text-base" />
+                              </Link>
+                            ) : (
+                              <button
+                                disabled
+                                className="btn btn-square btn-ghost btn-xs opacity-30 cursor-not-allowed"
+                                title={p.esVisitante ? 'Uso común visitantes' : 'Sin unidad vinculada'}
+                              >
+                                <span className="icon-[tabler--eye-off] text-base" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1312,15 +1811,55 @@ export default function CensoDashboardPage() {
 
           {/* Filtros Bodegas */}
           <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
-            <div className="relative">
-              <span className="icon-[tabler--search] absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 text-base" />
-              <input
-                type="text"
-                value={searchBodega}
-                onChange={(e) => setSearchBodega(e.target.value)}
-                placeholder="Buscar por número de bodega (ej. B-01), ubicación o apartamento..."
-                className="input input-sm w-full pl-9 text-xs"
-              />
+            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative flex-1">
+                <span className="icon-[tabler--search] absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 text-base" />
+                <input
+                  type="text"
+                  value={searchBodega}
+                  onChange={(e) => setSearchBodega(e.target.value)}
+                  placeholder="Buscar por número de bodega (ej. B-01), ubicación, torre o apartamento..."
+                  className="input input-sm w-full pl-9 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {torresDisponibles.length > 0 && (
+                  <select
+                    value={filtroTorreBodega}
+                    onChange={(e) => setFiltroTorreBodega(e.target.value)}
+                    className="select select-sm text-xs w-full"
+                  >
+                    <option value="todos">Torre: Todas</option>
+                    {torresDisponibles.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
+
+                <select
+                  value={filtroAsignacionBodega}
+                  onChange={(e) => setFiltroAsignacionBodega(e.target.value)}
+                  className="select select-sm text-xs w-full"
+                >
+                  <option value="todos">Asignación: Todas</option>
+                  <option value="asignadas">Asignadas a Unidad</option>
+                  <option value="libres">Libres / Sin Asignar</option>
+                </select>
+
+                <select
+                  value={ordenBodegas}
+                  onChange={(e) => setOrdenBodegas(e.target.value)}
+                  className="select select-sm text-xs w-full font-medium"
+                >
+                  <option value="numero_asc">Orden: Número (1 - 9 / A - Z)</option>
+                  <option value="numero_desc">Orden: Número (9 - 1 / Z - A)</option>
+                  <option value="area_desc">Orden: Mayor Área (m²)</option>
+                  <option value="area_asc">Orden: Menor Área (m²)</option>
+                  <option value="unidad_asc">Orden: Por Unidad / Apto</option>
+                  <option value="ubicacion_asc">Orden: Por Ubicación</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1339,41 +1878,74 @@ export default function CensoDashboardPage() {
                       <th>Ubicación</th>
                       <th>Área (m²)</th>
                       <th>Asignada a Unidad</th>
+                      <th className="text-right">Ficha</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {bodegasFiltradas.map((b) => (
-                      <tr key={b._id}>
-                        <td>
-                          <span className="font-mono font-bold text-sm text-info">
-                            {b.numero}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="text-xs text-base-content/80">
-                            {b.ubicacion || 'No especificada'}
-                          </span>
-                        </td>
-                        <td>
-                          {b.metrosCuadrados ? (
-                            <span className="badge badge-xs badge-soft font-mono">
-                              {b.metrosCuadrados} m²
+                    {bodegasFiltradas.map((b) => {
+                      const num = b.numero.trim().toUpperCase();
+                      const u = mapaUnidadesPorBodega.get(num);
+
+                      return (
+                        <tr key={b._id}>
+                          <td>
+                            <span className="font-mono font-bold text-sm text-info">
+                              {b.numero}
                             </span>
-                          ) : (
-                            <span className="text-xs text-base-content/40">-</span>
-                          )}
-                        </td>
-                        <td>
-                          {b.aptoAsignado || b.torreAsignada ? (
-                            <div className="text-xs font-semibold text-base-content">
-                              {b.torreAsignada ? `${b.torreAsignada} - ` : ''}Apto {b.aptoAsignado}
-                            </div>
-                          ) : (
-                            <span className="badge badge-xs badge-soft badge-ghost">Libre / Sin asignar</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td>
+                            <span className="text-xs text-base-content/80">
+                              {b.ubicacion || 'No especificada'}
+                            </span>
+                          </td>
+                          <td>
+                            {b.metrosCuadrados ? (
+                              <span className="badge badge-xs badge-soft font-mono">
+                                {b.metrosCuadrados} m²
+                              </span>
+                            ) : (
+                              <span className="text-xs text-base-content/40">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {u ? (
+                              <Link
+                                href={`/dashboard/censo/${u._id}`}
+                                className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                {b.torreAsignada ? `${b.torreAsignada} - ` : u.torre ? `${u.torre} - ` : ''}
+                                Apto {b.aptoAsignado || u.numeroApto}
+                              </Link>
+                            ) : b.aptoAsignado || b.torreAsignada ? (
+                              <div className="text-xs font-semibold text-base-content">
+                                {b.torreAsignada ? `${b.torreAsignada} - ` : ''}Apto {b.aptoAsignado}
+                              </div>
+                            ) : (
+                              <span className="badge badge-xs badge-soft badge-ghost">Libre / Sin asignar</span>
+                            )}
+                          </td>
+                          <td className="text-right">
+                            {u ? (
+                              <Link
+                                href={`/dashboard/censo/${u._id}`}
+                                className="btn btn-square btn-ghost btn-xs text-info"
+                                title={`Ver ficha de la vivienda (${u.identificador})`}
+                              >
+                                <span className="icon-[tabler--eye] text-base" />
+                              </Link>
+                            ) : (
+                              <button
+                                disabled
+                                className="btn btn-square btn-ghost btn-xs opacity-30 cursor-not-allowed"
+                                title="Sin unidad vinculada"
+                              >
+                                <span className="icon-[tabler--eye-off] text-base" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
