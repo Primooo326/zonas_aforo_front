@@ -207,7 +207,192 @@ export function descargarPlantillaExcel(nombreEdificio: string = 'Edificio') {
   XLSX.utils.book_append_sheet(wb, wsBodegas, 'Bodegas');
 
   const safeNombre = nombreEdificio.replace(/[^a-zA-Z0-9_\-]/g, '_');
-  XLSX.writeFile(wb, `Plantilla_Censo_${safeNombre}.xlsx`);
+  XLSX.writeFile(wb, `Plantilla_Censo_Basica_${safeNombre}.xlsx`);
+}
+
+export function descargarPlantillaCompletaExcel(nombreEdificio: string = 'Edificio') {
+  const wb = XLSX.utils.book_new();
+
+  // 1. Hoja Inmuebles
+  const inmueblesData = [
+    [
+      'Torre',
+      'Apto_Casa',
+      'Piso',
+      'Cuartos',
+      'Banos',
+      'Tiene_Balcon',
+      'Metros_Cuadrados',
+      'Tiene_Patio',
+      'Coeficiente',
+      'Tipo_Ocupacion',
+    ],
+    ['Torre 1', '101', 1, 3, 2, 'NO', 72.5, 'SI', 0.0125, 'Habitada'],
+    ['Torre 1', '102', 1, 2, 1, 'NO', 54.0, 'NO', 0.0095, 'Habitada'],
+    ['Torre 2', '201', 2, 3, 2, 'SI', 78.0, 'NO', 0.0135, 'Habitada'],
+    ['Torre 2', '202', 2, 3, 2, 'SI', 75.0, 'NO', 0.013, 'Desocupada'],
+  ];
+  const wsInmuebles = XLSX.utils.aoa_to_sheet(inmueblesData);
+  wsInmuebles['!cols'] = [
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 8 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 16 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsInmuebles, 'Inmuebles');
+
+  // 2. Hoja Residentes (Opcional pero estructurada)
+  const residentesData = [
+    [
+      'Torre',
+      'Apto',
+      'Nombre_Completo',
+      'Documento',
+      'Condicion',
+      'Es_Contacto_Principal',
+      'Fecha_Nacimiento',
+      'Telefono',
+      'Correo_Electronico',
+    ],
+    ['Torre 1', '101', 'Carlos Rodríguez Gómez', '1014205301', 'Propietario', 'SI', '1985-05-14', '3101234567', 'carlos.rodriguez@gmail.com'],
+    ['Torre 2', '201', 'María Fernanda López', '52890123', 'Propietario', 'NO', '1978-11-20', '3209876543', 'mfernanda.prop@hotmail.com'],
+    ['Torre 2', '201', 'Andrés Felipe Martínez', '1032456789', 'Arrendatario', 'SI', '1992-03-08', '3157891234', 'andres.martinez@gmail.com'],
+    ['Torre 2', '201', 'Sofía Martínez Castro', '1192345678', 'Conviviente', 'NO', '2016-08-15', '', ''],
+  ];
+  const wsResidentes = XLSX.utils.aoa_to_sheet(residentesData);
+  wsResidentes['!cols'] = [
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 26 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 22 },
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 28 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsResidentes, 'Residentes');
+
+  // 3. Hoja Mascotas (Opcional)
+  const mascotasData = [
+    [
+      'Torre',
+      'Apto',
+      'Tipo',
+      'Nombre',
+      'Raza',
+      'Manejo_Especial_Peligrosa',
+      'Vacunas_Al_Dia',
+      'Observaciones',
+    ],
+    ['Torre 1', '101', 'Perro', 'Max', 'Golden Retriever', 'NO', 'SI', 'Carnet al día'],
+    ['Torre 1', '102', 'Perro', 'Thor', 'Pitbull Terrier', 'SI', 'SI', 'Póliza vigente y bozal reglamentario'],
+    ['Torre 2', '201', 'Gato', 'Luna', 'Siamés', 'NO', 'SI', 'Esterilizada'],
+    ['Torre 2', '201', 'Perro', 'Rocky', 'Rottweiler', 'SI', 'NO', 'Pendiente refuerzo anual de rabia'],
+  ];
+  const wsMascotas = XLSX.utils.aoa_to_sheet(mascotasData);
+  wsMascotas['!cols'] = [
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 22 },
+    { wch: 26 },
+    { wch: 16 },
+    { wch: 34 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsMascotas, 'Mascotas');
+
+  // 4. Hoja Vehículos (Opcional)
+  const vehiculosData = [
+    [
+      'Torre',
+      'Apto',
+      'Tipo',
+      'Placa',
+      'Marca',
+      'Modelo',
+      'Color',
+      'Parquea_En_Edificio',
+      'Numero_Parqueadero',
+    ],
+    ['Torre 1', '101', 'Carro', 'ABC123', 'Mazda', '2021', 'Rojo', 'SI', 'P-101'],
+    ['Torre 1', '102', 'Moto', 'XYZ45F', 'Yamaha', '2023', 'Negro', 'SI', 'M-102'],
+    ['Torre 2', '201', 'Carro', 'KLM789', 'Renault', '2019', 'Gris', 'NO', ''],
+    ['Torre 2', '201', 'Bicicleta', 'BIC-01', 'GW', '2022', 'Azul', 'SI', 'BICI-001'],
+  ];
+  const wsVehiculos = XLSX.utils.aoa_to_sheet(vehiculosData);
+  wsVehiculos['!cols'] = [
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsVehiculos, 'Vehículos');
+
+  // 5. Hoja Parqueaderos (Opcional)
+  const parqueaderosData = [
+    [
+      'Numero_Parqueadero',
+      'Torre_Asignada',
+      'Apto_Asignado',
+      'Es_Visitante',
+      'Tipo',
+      'Es_Cubierto',
+    ],
+    ['P-101', 'Torre 1', '101', 'NO', 'Carro', 'SI'],
+    ['M-102', 'Torre 1', '102', 'NO', 'Moto', 'SI'],
+    ['V-01', '', '', 'SI', 'Carro', 'NO'],
+    ['BICI-001', 'Torre 2', '201', 'NO', 'Bicicleta', 'SI'],
+  ];
+  const wsParqueaderos = XLSX.utils.aoa_to_sheet(parqueaderosData);
+  wsParqueaderos['!cols'] = [
+    { wch: 20 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsParqueaderos, 'Parqueaderos');
+
+  // 6. Hoja Bodegas (Opcional)
+  const bodegasData = [
+    [
+      'Numero_Bodega',
+      'Torre_Asignada',
+      'Apto_Asignado',
+      'Ubicacion',
+      'Metros_Cuadrados',
+    ],
+    ['B-01', 'Torre 1', '101', 'Sótano 1', 4.5],
+    ['B-02', 'Torre 1', '102', 'Sótano 1', 3.8],
+    ['B-03', 'Torre 2', '201', 'Sótano 2', 5.0],
+    ['B-04', 'Torre 2', '202', 'Piso 1', 2.8],
+  ];
+  const wsBodegas = XLSX.utils.aoa_to_sheet(bodegasData);
+  wsBodegas['!cols'] = [
+    { wch: 18 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 18 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsBodegas, 'Bodegas');
+
+  const safeNombre = nombreEdificio.replace(/[^a-zA-Z0-9_\-]/g, '_');
+  XLSX.writeFile(wb, `Plantilla_Censo_Completo_${safeNombre}.xlsx`);
 }
 
 export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
@@ -447,7 +632,14 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
           fechaNacimiento = `${parsedDate.y}-${String(parsedDate.m).padStart(2, '0')}-${String(parsedDate.d).padStart(2, '0')}`;
         }
       } else if (typeof fechaNacRaw === 'string') {
-        fechaNacimiento = fechaNacRaw.trim();
+        const trimmed = fechaNacRaw.trim();
+        const matchDMY = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (matchDMY) {
+          const [, d, mStr, y] = matchDMY;
+          fechaNacimiento = `${y}-${mStr.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        } else {
+          fechaNacimiento = trimmed;
+        }
       }
 
       const telefono = String(getVal(['Teléfono', 'Telefono', 'Celular']) || '').trim();
@@ -501,7 +693,12 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
       const torre = normalizarTorre(rawTorre);
       const apto = String(getVal(['Apto', 'Apto_Casa', 'Apartamento']) || '').trim();
       const identificador = String(getVal(['Unidad / Apto', 'Unidad_Apto', 'Identificador', 'Unidad']) || '').trim();
-      const tipo = String(getVal(['Tipo', 'Especie']) || 'Perro').trim();
+      const tipoRaw = String(getVal(['Tipo', 'Especie']) || 'Perro').trim().toLowerCase();
+      const tipo = tipoRaw.includes('gato') || tipoRaw.includes('felin')
+        ? 'gato'
+        : tipoRaw.includes('perr') || tipoRaw.includes('can')
+          ? 'perro'
+          : (['perro', 'gato', 'otro'].includes(tipoRaw) ? tipoRaw : 'otro');
       const raza = String(getVal(['Raza']) || '').trim();
       const esPeligroso = parseBoolean(getVal(['Manejo Especial (Peligrosa)', 'Manejo Especial', 'Es_Peligroso', 'Peligrosa', 'Peligroso']));
       const vacunasAlDia = getVal(['Vacunas al Día', 'Vacunas_Al_Dia', 'Vacunas']) !== undefined
@@ -545,8 +742,18 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
         return undefined;
       };
 
-      const tipo = String(getVal(['Tipo', 'Tipo_Vehiculo']) || 'Carro').trim();
-      const placa = String(getVal(['Placa']) || '').trim();
+      const tipoRaw = String(getVal(['Tipo', 'Tipo_Vehiculo']) || 'Carro').trim().toLowerCase();
+      const tipo = tipoRaw.includes('moto')
+        ? 'moto'
+        : tipoRaw.includes('bici')
+          ? 'bicicleta'
+          : (tipoRaw.includes('carr') || tipoRaw.includes('auto'))
+            ? 'carro'
+            : (['carro', 'moto', 'bicicleta', 'otro'].includes(tipoRaw) ? tipoRaw : 'otro');
+      let placa = String(getVal(['Placa']) || '').trim().toUpperCase().replace(/[\s\-]/g, '');
+      if (!placa && tipo === 'bicicleta') {
+        placa = 'BIC-SN';
+      }
       const rawTorre = String(getVal(['Torre']) || '').trim();
       const torre = normalizarTorre(rawTorre);
       const apto = String(getVal(['Apto', 'Apto_Casa', 'Apartamento']) || '').trim();

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import {
   descargarPlantillaExcel,
+  descargarPlantillaCompletaExcel,
   parsearExcelCenso,
   ParsedCensoExcel,
 } from '@/lib/censo-excel';
@@ -212,24 +213,38 @@ export default function ModalCargaExcel({
           /* Formulario de Carga y Descarga */
           <div className="space-y-5">
             {/* Paso 1: Descargar plantilla */}
-            <div className="p-4 rounded-xl bg-base-200/40 border border-base-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="p-4 rounded-xl bg-base-200/40 border border-base-200 space-y-3">
               <div className="space-y-0.5">
                 <div className="text-sm font-semibold text-base-content flex items-center gap-1.5">
                   <span className="icon-[tabler--template] text-primary" />
                   1. Descargar Plantilla Oficial Excel
                 </div>
                 <p className="text-xs text-base-content/70">
-                  Archivo .xlsx con 3 hojas preformateadas (Inmuebles, Parqueaderos y Bodegas) y ejemplos.
+                  Selecciona la plantilla según el alcance que desees registrar con filas de ejemplo y formatos normalizados:
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => descargarPlantillaExcel(edificioNombre)}
-                className="btn btn-sm btn-outline btn-primary gap-1.5 w-full sm:w-auto shrink-0 justify-center"
-              >
-                <span className="icon-[tabler--download] text-base" />
-                <span>Descargar Plantilla (.xlsx)</span>
-              </button>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => descargarPlantillaExcel(edificioNombre)}
+                  className="btn btn-sm btn-outline gap-1.5 flex-1 justify-center"
+                  title="3 Hojas: Inmuebles, Parqueaderos y Bodegas"
+                >
+                  <span className="icon-[tabler--file-spreadsheet] text-base" />
+                  <span className="truncate">Plantilla Básica (3 Hojas)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => descargarPlantillaCompletaExcel(edificioNombre)}
+                  className="btn btn-sm btn-primary gap-1.5 flex-1 justify-center"
+                  title="6 Hojas: Inmuebles, Residentes, Mascotas, Vehículos, Parqueaderos y Bodegas"
+                >
+                  <span className="icon-[tabler--sparkles] text-base" />
+                  <span className="truncate">Plantilla Completa (6 Hojas)</span>
+                </button>
+              </div>
             </div>
 
             {/* Paso 2: Zona Drag and Drop */}

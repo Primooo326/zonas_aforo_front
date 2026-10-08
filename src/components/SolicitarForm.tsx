@@ -312,7 +312,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         {!cargandoCenso && unidadesCenso.length > 0 ? (
           <div className="bg-primary/5 border border-primary/20 rounded-box p-3.5 space-y-3">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <span className="icon-[tabler--database-check] text-sm" />
+              <span className="icon-[tabler--database] text-sm" />
               <span>Inmueble Registrado en el Censo</span>
             </div>
 
