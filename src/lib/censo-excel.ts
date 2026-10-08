@@ -30,16 +30,60 @@ export interface ImportarBodegaItem {
   metrosCuadrados?: number;
 }
 
+export interface ImportarResidenteItem {
+  torre?: string;
+  apto?: string;
+  identificador?: string;
+  nombreCompleto: string;
+  documento?: string;
+  condicion: string;
+  esContactoPrincipal?: boolean;
+  fechaNacimiento: string;
+  telefono?: string;
+  email?: string;
+}
+
+export interface ImportarMascotaItem {
+  torre?: string;
+  apto?: string;
+  identificador?: string;
+  tipo: string;
+  nombre: string;
+  raza?: string;
+  esPeligroso?: boolean;
+  vacunasAlDia?: boolean;
+  observaciones?: string;
+}
+
+export interface ImportarVehiculoItem {
+  torre?: string;
+  apto?: string;
+  identificador?: string;
+  tipo: string;
+  placa?: string;
+  marca?: string;
+  modelo?: string;
+  color?: string;
+  parqueaEnEdificio?: boolean;
+  numeroParqueadero?: string;
+}
+
 export interface ParsedCensoExcel {
   inmuebles: ImportarInmuebleItem[];
   parqueaderos: ImportarParqueaderoItem[];
   bodegas: ImportarBodegaItem[];
+  residentes: ImportarResidenteItem[];
+  mascotas: ImportarMascotaItem[];
+  vehiculos: ImportarVehiculoItem[];
   estadisticas: {
     totalInmuebles: number;
     totalParqueaderos: number;
     parqueaderosPrivados: number;
     parqueaderosVisitantes: number;
     totalBodegas: number;
+    totalResidentes: number;
+    totalMascotas: number;
+    totalVehiculos: number;
   };
   errores: string[];
   advertencias: string[];
@@ -185,12 +229,18 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
       inmuebles: [],
       parqueaderos: [],
       bodegas: [],
+      residentes: [],
+      mascotas: [],
+      vehiculos: [],
       estadisticas: {
         totalInmuebles: 0,
         totalParqueaderos: 0,
         parqueaderosPrivados: 0,
         parqueaderosVisitantes: 0,
         totalBodegas: 0,
+        totalResidentes: 0,
+        totalMascotas: 0,
+        totalVehiculos: 0,
       },
       errores,
       advertencias,
@@ -350,6 +400,178 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
     });
   }
 
+  // Parsear Residentes (Opcional)
+  const residentes: ImportarResidenteItem[] = [];
+  const nombreHojaResidentes = sheetNames.find(
+    (name) => name.trim().toLowerCase() === 'residentes' || name.trim().toLowerCase() === 'personas' || name.trim().toLowerCase() === 'habitantes',
+  );
+
+  if (nombreHojaResidentes) {
+    const wsRes = wb.Sheets[nombreHojaResidentes];
+    const rawRes: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wsRes, { defval: '' });
+
+    rawRes.forEach((row, idx) => {
+      const filaNum = idx + 2;
+      const getVal = (claves: string[]): unknown => {
+        for (const k of claves) {
+          for (const rowKey of Object.keys(row)) {
+            if (rowKey.trim().toLowerCase() === k.toLowerCase()) {
+              return row[rowKey];
+            }
+          }
+        }
+        return undefined;
+      };
+
+      const nombre = String(getVal(['Nombre Completo', 'Nombre_Completo', 'Nombre', 'Residente']) || '').trim();
+      if (!nombre) {
+        advertencias.push(`Fila ${filaNum} de Residentes: omitida por no tener nombre.`);
+        return;
+      }
+
+      const rawTorre = String(getVal(['Torre']) || '').trim();
+      const torre = normalizarTorre(rawTorre);
+      const apto = String(getVal(['Apto', 'Apto_Casa', 'Apartamento', 'Numero_Apto']) || '').trim();
+      const identificador = String(getVal(['Unidad / Apto', 'Unidad_Apto', 'Identificador', 'Unidad']) || '').trim();
+      const documento = String(getVal(['Documento', 'Cédula', 'Cedula', 'Doc']) || '').trim();
+      const condicionRaw = String(getVal(['Condición', 'Condicion', 'Tipo']) || '').trim().toLowerCase();
+      const condicion = condicionRaw.includes('prop') ? 'propietario' : condicionRaw.includes('arrend') ? 'arrendatario' : 'conviviente';
+      const esContactoPrincipal = parseBoolean(getVal(['Contacto Principal', 'Es_Contacto_Principal', 'Principal']));
+      const fechaNacRaw = getVal(['Fecha Nacimiento', 'Fecha_Nacimiento', 'Nacimiento']);
+      let fechaNacimiento = '';
+      if (fechaNacRaw instanceof Date) {
+        fechaNacimiento = fechaNacRaw.toISOString().split('T')[0];
+      } else if (typeof fechaNacRaw === 'number') {
+        const parsedDate = XLSX.SSF.parse_date_code(fechaNacRaw);
+        if (parsedDate) {
+          fechaNacimiento = `${parsedDate.y}-${String(parsedDate.m).padStart(2, '0')}-${String(parsedDate.d).padStart(2, '0')}`;
+        }
+      } else if (typeof fechaNacRaw === 'string') {
+        fechaNacimiento = fechaNacRaw.trim();
+      }
+
+      const telefono = String(getVal(['Teléfono', 'Telefono', 'Celular']) || '').trim();
+      const email = String(getVal(['Correo Electrónico', 'Correo_Electronico', 'Correo', 'Email']) || '').trim();
+
+      residentes.push({
+        torre: torre || undefined,
+        apto: apto || undefined,
+        identificador: identificador || undefined,
+        nombreCompleto: nombre,
+        documento: documento || undefined,
+        condicion,
+        esContactoPrincipal,
+        fechaNacimiento,
+        telefono: telefono || undefined,
+        email: email || undefined,
+      });
+    });
+  }
+
+  // Parsear Mascotas (Opcional)
+  const mascotas: ImportarMascotaItem[] = [];
+  const nombreHojaMascotas = sheetNames.find(
+    (name) => name.trim().toLowerCase() === 'mascotas' || name.trim().toLowerCase() === 'animales',
+  );
+
+  if (nombreHojaMascotas) {
+    const wsMas = wb.Sheets[nombreHojaMascotas];
+    const rawMas: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wsMas, { defval: '' });
+
+    rawMas.forEach((row, idx) => {
+      const filaNum = idx + 2;
+      const getVal = (claves: string[]): unknown => {
+        for (const k of claves) {
+          for (const rowKey of Object.keys(row)) {
+            if (rowKey.trim().toLowerCase() === k.toLowerCase()) {
+              return row[rowKey];
+            }
+          }
+        }
+        return undefined;
+      };
+
+      const nombre = String(getVal(['Nombre', 'Nombre_Mascota']) || '').trim();
+      if (!nombre) {
+        advertencias.push(`Fila ${filaNum} de Mascotas: omitida por no tener nombre.`);
+        return;
+      }
+
+      const rawTorre = String(getVal(['Torre']) || '').trim();
+      const torre = normalizarTorre(rawTorre);
+      const apto = String(getVal(['Apto', 'Apto_Casa', 'Apartamento']) || '').trim();
+      const identificador = String(getVal(['Unidad / Apto', 'Unidad_Apto', 'Identificador', 'Unidad']) || '').trim();
+      const tipo = String(getVal(['Tipo', 'Especie']) || 'Perro').trim();
+      const raza = String(getVal(['Raza']) || '').trim();
+      const esPeligroso = parseBoolean(getVal(['Manejo Especial (Peligrosa)', 'Manejo Especial', 'Es_Peligroso', 'Peligrosa', 'Peligroso']));
+      const vacunasAlDia = getVal(['Vacunas al Día', 'Vacunas_Al_Dia', 'Vacunas']) !== undefined
+        ? parseBoolean(getVal(['Vacunas al Día', 'Vacunas_Al_Dia', 'Vacunas']))
+        : true;
+      const observaciones = String(getVal(['Observaciones', 'Notas']) || '').trim();
+
+      mascotas.push({
+        torre: torre || undefined,
+        apto: apto || undefined,
+        identificador: identificador || undefined,
+        tipo,
+        nombre,
+        raza: raza || undefined,
+        esPeligroso,
+        vacunasAlDia,
+        observaciones: observaciones || undefined,
+      });
+    });
+  }
+
+  // Parsear Vehículos (Opcional)
+  const vehiculos: ImportarVehiculoItem[] = [];
+  const nombreHojaVehiculos = sheetNames.find(
+    (name) => name.trim().toLowerCase() === 'vehículos' || name.trim().toLowerCase() === 'vehiculos',
+  );
+
+  if (nombreHojaVehiculos) {
+    const wsVeh = wb.Sheets[nombreHojaVehiculos];
+    const rawVeh: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wsVeh, { defval: '' });
+
+    rawVeh.forEach((row) => {
+      const getVal = (claves: string[]): unknown => {
+        for (const k of claves) {
+          for (const rowKey of Object.keys(row)) {
+            if (rowKey.trim().toLowerCase() === k.toLowerCase()) {
+              return row[rowKey];
+            }
+          }
+        }
+        return undefined;
+      };
+
+      const tipo = String(getVal(['Tipo', 'Tipo_Vehiculo']) || 'Carro').trim();
+      const placa = String(getVal(['Placa']) || '').trim();
+      const rawTorre = String(getVal(['Torre']) || '').trim();
+      const torre = normalizarTorre(rawTorre);
+      const apto = String(getVal(['Apto', 'Apto_Casa', 'Apartamento']) || '').trim();
+      const identificador = String(getVal(['Unidad / Apto', 'Unidad_Apto', 'Identificador', 'Unidad']) || '').trim();
+      const marca = String(getVal(['Marca']) || '').trim();
+      const modelo = String(getVal(['Modelo']) || '').trim();
+      const color = String(getVal(['Color']) || '').trim();
+      const parqueaEnEdificio = parseBoolean(getVal(['Parquea en Edificio', 'Parquea_En_Edificio', 'Parquea_Adentro', 'Adentro']));
+      const numeroParqueadero = String(getVal(['N° Parqueadero', 'Numero_Parqueadero', 'Parqueadero']) || '').trim();
+
+      vehiculos.push({
+        torre: torre || undefined,
+        apto: apto || undefined,
+        identificador: identificador || undefined,
+        tipo,
+        placa: placa || undefined,
+        marca: marca || undefined,
+        modelo: modelo || undefined,
+        color: color || undefined,
+        parqueaEnEdificio,
+        numeroParqueadero: numeroParqueadero || undefined,
+      });
+    });
+  }
+
   const parqueaderosVisitantes = parqueaderos.filter((p) => p.esVisitante).length;
   const parqueaderosPrivados = parqueaderos.length - parqueaderosVisitantes;
 
@@ -357,12 +579,18 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
     inmuebles,
     parqueaderos,
     bodegas,
+    residentes,
+    mascotas,
+    vehiculos,
     estadisticas: {
       totalInmuebles: inmuebles.length,
       totalParqueaderos: parqueaderos.length,
       parqueaderosPrivados,
       parqueaderosVisitantes,
       totalBodegas: bodegas.length,
+      totalResidentes: residentes.length,
+      totalMascotas: mascotas.length,
+      totalVehiculos: vehiculos.length,
     },
     errores,
     advertencias,

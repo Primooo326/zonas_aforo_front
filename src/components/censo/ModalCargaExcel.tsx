@@ -30,6 +30,9 @@ export default function ModalCargaExcel({
     inmueblesActualizados: number;
     parqueaderosProcesados: number;
     bodegasProcesadas: number;
+    residentesProcesados?: number;
+    mascotasProcesadas?: number;
+    vehiculosProcesados?: number;
   } | null>(null);
   const [errorGlobal, setErrorGlobal] = useState('');
 
@@ -78,6 +81,9 @@ export default function ModalCargaExcel({
           inmuebles: parsedData.inmuebles,
           parqueaderos: parsedData.parqueaderos,
           bodegas: parsedData.bodegas,
+          residentes: parsedData.residentes,
+          mascotas: parsedData.mascotas,
+          vehiculos: parsedData.vehiculos,
         }),
       });
 
@@ -86,6 +92,9 @@ export default function ModalCargaExcel({
         inmueblesActualizados: res.inmueblesActualizados ?? 0,
         parqueaderosProcesados: res.parqueaderosProcesados ?? 0,
         bodegasProcesadas: res.bodegasProcesadas ?? 0,
+        residentesProcesados: res.residentesProcesados ?? 0,
+        mascotasProcesadas: res.mascotasProcesadas ?? 0,
+        vehiculosProcesados: res.vehiculosProcesados ?? 0,
       });
 
       onSuccess();
@@ -145,7 +154,7 @@ export default function ModalCargaExcel({
               La base de datos del conjunto ha sido actualizada correctamente sin alterar los residentes previamente censados.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 text-center pt-2">
               <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
                 <div className="text-2xl font-bold text-primary">{resultado.inmueblesCreados}</div>
                 <div className="text-2xs text-base-content/70">Nuevos Inmuebles</div>
@@ -162,6 +171,24 @@ export default function ModalCargaExcel({
                 <div className="text-2xl font-bold text-info">{resultado.bodegasProcesadas}</div>
                 <div className="text-2xs text-base-content/70">Bodegas</div>
               </div>
+              {Boolean(resultado.residentesProcesados) && (
+                <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                  <div className="text-2xl font-bold text-accent">{resultado.residentesProcesados}</div>
+                  <div className="text-2xs text-base-content/70">Residentes Censados</div>
+                </div>
+              )}
+              {Boolean(resultado.mascotasProcesadas) && (
+                <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                  <div className="text-2xl font-bold text-warning">{resultado.mascotasProcesadas}</div>
+                  <div className="text-2xs text-base-content/70">Mascotas</div>
+                </div>
+              )}
+              {Boolean(resultado.vehiculosProcesados) && (
+                <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                  <div className="text-2xl font-bold text-neutral-content">{resultado.vehiculosProcesados}</div>
+                  <div className="text-2xs text-base-content/70">Vehículos</div>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 flex justify-center gap-3">
@@ -312,14 +339,14 @@ export default function ModalCargaExcel({
                       Resumen del Inventario a Procesar:
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
+                      <div className="p-2.5 rounded-lg bg-base-200/50 border border-base-200">
                         <div className="text-lg font-bold text-primary">
                           {parsedData.estadisticas.totalInmuebles}
                         </div>
                         <div className="text-2xs text-base-content/70">Inmuebles</div>
                       </div>
-                      <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                      <div className="p-2.5 rounded-lg bg-base-200/50 border border-base-200">
                         <div className="text-lg font-bold text-success">
                           {parsedData.estadisticas.totalParqueaderos}
                         </div>
@@ -327,12 +354,36 @@ export default function ModalCargaExcel({
                           Parqueaderos ({parsedData.estadisticas.parqueaderosVisitantes} vis.)
                         </div>
                       </div>
-                      <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                      <div className="p-2.5 rounded-lg bg-base-200/50 border border-base-200">
                         <div className="text-lg font-bold text-info">
                           {parsedData.estadisticas.totalBodegas}
                         </div>
                         <div className="text-2xs text-base-content/70">Bodegas</div>
                       </div>
+                      {parsedData.estadisticas.totalResidentes > 0 && (
+                        <div className="p-2.5 rounded-lg bg-base-200/50 border border-base-200">
+                          <div className="text-lg font-bold text-accent">
+                            {parsedData.estadisticas.totalResidentes}
+                          </div>
+                          <div className="text-2xs text-base-content/70">Residentes</div>
+                        </div>
+                      )}
+                      {parsedData.estadisticas.totalMascotas > 0 && (
+                        <div className="p-2.5 rounded-lg bg-base-200/50 border border-base-200">
+                          <div className="text-lg font-bold text-warning">
+                            {parsedData.estadisticas.totalMascotas}
+                          </div>
+                          <div className="text-2xs text-base-content/70">Mascotas</div>
+                        </div>
+                      )}
+                      {parsedData.estadisticas.totalVehiculos > 0 && (
+                        <div className="p-2.5 rounded-lg bg-base-200/50 border border-base-200">
+                          <div className="text-lg font-bold text-base-content">
+                            {parsedData.estadisticas.totalVehiculos}
+                          </div>
+                          <div className="text-2xs text-base-content/70">Vehículos</div>
+                        </div>
+                      )}
                     </div>
 
                     <p className="text-2xs text-base-content/60 italic">
