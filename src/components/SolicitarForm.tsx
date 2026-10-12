@@ -10,6 +10,13 @@ interface Zona {
   horarios: { dia: string; inicio: string; fin: string }[];
   aforoMaximo: number;
   lapsoMinutos: number;
+  politicasUso?: string;
+  enMantenimiento?: boolean;
+  motivoMantenimiento?: string;
+  mantenimientoFechaInicio?: string;
+  mantenimientoHoraInicio?: string;
+  mantenimientoFechaFin?: string;
+  mantenimientoHoraFin?: string;
 }
 
 interface UnidadPublica {
@@ -84,6 +91,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
       horaInicio: '',
       tipo,
       telefonoContacto: tel,
+      edadSolicitante: '25',
     };
   });
   const [disponibilidad, setDisponibilidad] = useState<Disponibilidad>({});
@@ -170,11 +178,44 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
     }
   };
 
+  const estaEnMantenimiento = (zona?: Zona | null, fecha?: string, horaIni?: string, horaF?: string) => {
+    if (!zona?.enMantenimiento) return false;
+    if (!zona.mantenimientoFechaInicio && !zona.mantenimientoFechaFin) return true;
+    if (!fecha || !horaIni || !horaF) return false;
+
+    const fInicio = zona.mantenimientoFechaInicio || '1970-01-01';
+    const hInicio = zona.mantenimientoHoraInicio || '00:00';
+    const fFin = zona.mantenimientoFechaFin || '2099-12-31';
+    const hFin = zona.mantenimientoHoraFin || '23:59';
+
+    const slotInicio = `${fecha}T${horaIni}`;
+    const slotFin = `${fecha}T${horaF}`;
+    const mantInicio = `${fInicio}T${hInicio}`;
+    const mantFin = `${fFin}T${hFin}`;
+
+    return slotInicio < mantFin && slotFin > mantInicio;
+  };
+
+  const enMantenimientoSlot = estaEnMantenimiento(zonaSel, form.fecha, form.horaInicio, horaFinCalc);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!zonaId) {
       setError('Selecciona una zona');
+      return;
+    }
+    if (enMantenimientoSlot) {
+      const periodo = zonaSel?.mantenimientoFechaInicio
+        ? ` (del ${zonaSel.mantenimientoFechaInicio} al ${zonaSel.mantenimientoFechaFin})`
+        : '';
+      setError(
+        `Esta zona común se encuentra en mantenimiento${periodo}: ${zonaSel?.motivoMantenimiento || 'Mantenimiento en curso'}. No es posible reservar en este horario.`,
+      );
+      return;
+    }
+    if (form.edadSolicitante && Number(form.edadSolicitante) < 18) {
+      setError('Los menores de edad no están autorizados para apartar zonas comunes.');
       return;
     }
     if (diaSinHorario) {
@@ -198,6 +239,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         fecha: form.fecha,
         horaInicio: form.horaInicio,
         nombreSolicitante: form.nombreSolicitante,
+        edadSolicitante: Number(form.edadSolicitante) || 18,
       };
 
       if (unidadesCenso.length > 0 && unidadSeleccionada) {
@@ -261,13 +303,16 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         </p>
         <button
           type="button"
-          className="btn btn-primary w-full mt-6"
+          className="btn btn-primary w-full mt-6 gap-2"
           onClick={() => {
             setSuccess(false);
             setSuccessData(null);
+            setForm((prev) => ({ ...prev, horaInicio: '' }));
+            setDisponibilidad({});
           }}
         >
-          Hacer otra solicitud
+          <span className="icon-[tabler--arrow-back-up] text-lg" />
+          Volver para hacer otra reservación
         </button>
       </div>
     );
@@ -302,11 +347,43 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
             <option value="">Selecciona una zona...</option>
             {zonas.map((z) => (
               <option key={z._id} value={z._id}>
-                {z.nombre} (Aforo: {z.aforoMaximo})
+                {z.nombre} (Aforo: {z.aforoMaximo}){z.enMantenimiento ? ' — [EN MANTENIMIENTO]' : ''}
               </option>
             ))}
           </select>
         </label>
+
+        {zonaSel?.enMantenimiento && (
+          <div className="alert alert-warning text-xs sm:text-sm">
+            <span className="icon-[tabler--alert-triangle] text-lg shrink-0" />
+            <div>
+              <p className="font-bold">
+                {zonaSel.mantenimientoFechaInicio ? 'Mantenimiento Programado' : 'Zona en Mantenimiento'}
+              </p>
+              <p>
+                {zonaSel.mantenimientoFechaInicio ? (
+                  <span>
+                    Programado del <strong>{zonaSel.mantenimientoFechaInicio} {zonaSel.mantenimientoHoraInicio || ''}</strong> al <strong>{zonaSel.mantenimientoFechaFin || ''} {zonaSel.mantenimientoHoraFin || ''}</strong>. Motivo: {zonaSel.motivoMantenimiento || 'Mantenimiento de instalaciones'}.
+                  </span>
+                ) : (
+                  <span>
+                    {zonaSel.motivoMantenimiento || 'Esta zona se encuentra temporalmente fuera de servicio por mantenimiento'}. Reservas deshabilitadas.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {zonaSel?.politicasUso && (
+          <div className="bg-primary/5 border border-primary/20 rounded-box p-3 text-xs space-y-1">
+            <span className="font-semibold text-primary flex items-center gap-1">
+              <span className="icon-[tabler--shield-check] text-sm" />
+              Políticas de Uso de la Zona:
+            </span>
+            <p className="text-base-content/80 whitespace-pre-line">{zonaSel.politicasUso}</p>
+          </div>
+        )}
 
         {/* MODO CENSO (Selectores de Torre e Inmueble) vs MODO LEGACY */}
         {!cargandoCenso && unidadesCenso.length > 0 ? (
@@ -401,6 +478,26 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         </label>
 
         <label className="form-control">
+          <div className="flex justify-between items-center">
+            <span className="label-text">Edad del Solicitante * (Mayor de edad)</span>
+            <span className="text-xs text-base-content/50">Regla de Aforo</span>
+          </div>
+          <input
+            type="number"
+            min="1"
+            max="120"
+            className="input input-bordered"
+            required
+            placeholder="Ej: 28"
+            value={form.edadSolicitante}
+            onChange={(e) => setForm({ ...form, edadSolicitante: e.target.value })}
+          />
+          <span className="label-text-alt text-base-content/60">
+            Los menores de 18 años no están autorizados para apartar zonas comunes.
+          </span>
+        </label>
+
+        <label className="form-control">
           <span className="label-text">Teléfono de Contacto (opcional)</span>
           <input
             type="tel"
@@ -485,10 +582,10 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
         <button
           type="submit"
-          disabled={saving || !zonaId || diaSinHorario || disponibilidad.disponible === false}
+          disabled={saving || !zonaId || diaSinHorario || disponibilidad.disponible === false || enMantenimientoSlot}
           className="btn btn-primary w-full mt-2"
         >
-          {saving ? <span className="loading loading-spinner"></span> : 'Solicitar turno'}
+          {saving ? <span className="loading loading-spinner"></span> : enMantenimientoSlot ? 'Zona en mantenimiento' : 'Solicitar turno'}
         </button>
       </form>
     </div>

@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { fechaLocal } from '@/lib/fecha';
 import QRCode from 'qrcode';
+import ModalProgramarMantenimiento, { ZonaMantenimientoInfo } from '@/components/ModalProgramarMantenimiento';
 
 interface Horario {
   dia: string;
@@ -16,18 +18,51 @@ interface Zona {
   _id: string;
   nombre: string;
   descripcion?: string;
+  politicasUso?: string;
   aforoMaximo: number;
   lapsoMinutos: number;
   horarios?: Horario[];
+  imagenes?: string[];
+  enMantenimiento?: boolean;
+  motivoMantenimiento?: string;
+  mantenimientoFechaInicio?: string;
+  mantenimientoHoraInicio?: string;
+  mantenimientoFechaFin?: string;
+  mantenimientoHoraFin?: string;
+}
+
+interface Reserva {
+  _id: string;
+  zonaId?: { _id: string; nombre: string } | null;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  nombreSolicitante: string;
+  torreInmueble: string;
+  estado: string;
+}
+
+function colorPct(pct: number) {
+  if (pct >= 100) return 'text-error';
+  if (pct >= 75) return 'text-warning';
+  return 'text-success';
+}
+
+function barraPct(pct: number) {
+  if (pct >= 100) return 'progress-error';
+  if (pct >= 75) return 'progress-warning';
+  return 'progress-success';
 }
 
 export default function ZonasPage() {
   const { edificio } = useAuth();
   const [zonas, setZonas] = useState<Zona[]>([]);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [zonaMantenimiento, setZonaMantenimiento] = useState<ZonaMantenimientoInfo | null>(null);
 
   const publicUrl = typeof window !== 'undefined' && edificio?.id
     ? `${window.location.origin}/invitacion/${edificio.id}`
@@ -58,14 +93,43 @@ export default function ZonasPage() {
 
   const cargar = () => {
     apiFetch('/zonas')
-      .then(setZonas)
+      .then((data) => setZonas(Array.isArray(data) ? data : []))
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    if (edificio?.id) {
+      const hoy = fechaLocal();
+      apiFetch(`/edificio/${edificio.id}/reservas?fecha=${hoy}`)
+        .then((data) => setReservas(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    }
   };
 
   useEffect(() => {
     cargar();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edificio]);
+
+  const stats = useMemo(() => {
+    const activas = reservas.filter((r) => r.estado === 'activa');
+    const ahora = new Date();
+    const hhmmAhora = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+    const totalAforo = zonas.reduce((sum, z) => sum + (z.aforoMaximo || 0), 0);
+    const ocupacionAhora = activas.filter(
+      (r) => r.horaInicio <= hhmmAhora && hhmmAhora < r.horaFin,
+    ).length;
+    const pctOcupacionAhora = totalAforo > 0 ? Math.round((ocupacionAhora / totalAforo) * 100) : 0;
+    const zonasMantenimiento = zonas.filter((z) => z.enMantenimiento).length;
+    const reservasHoy = activas.length;
+
+    return {
+      totalAforo,
+      ocupacionAhora,
+      pctOcupacionAhora,
+      zonasMantenimiento,
+      reservasHoy,
+    };
+  }, [zonas, reservas]);
 
   const eliminar = async (id: string, nombre: string) => {
     if (!confirm(`¿Eliminar la zona "${nombre}"?`)) return;
@@ -77,42 +141,58 @@ export default function ZonasPage() {
     }
   };
 
+  const abrirModalMantenimiento = (zona: Zona) => {
+    setZonaMantenimiento({
+      id: zona._id,
+      nombre: zona.nombre,
+      enMantenimiento: zona.enMantenimiento,
+      motivoMantenimiento: zona.motivoMantenimiento,
+      mantenimientoFechaInicio: zona.mantenimientoFechaInicio,
+      mantenimientoHoraInicio: zona.mantenimientoHoraInicio,
+      mantenimientoFechaFin: zona.mantenimientoFechaFin,
+      mantenimientoHoraFin: zona.mantenimientoHoraFin,
+    });
+  };
+
   return (
     <div className="space-y-6">
-      {/* Encabezado */}
+      {/* Encabezado y Acciones */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Zonas Comunes</h1>
-          <p className="text-xs sm:text-sm text-base-content/60">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-base-content flex items-center gap-2">
+            <span className="icon-[tabler--calendar-event] text-primary text-2xl sm:text-3xl shrink-0" aria-hidden="true" />
+            <span>Zonas Comunes</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-base-content/70 mt-0.5">
             Gestiona las áreas sociales, aforos y horarios de tu edificio
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:items-center sm:w-auto">
           {edificio?.id && (
             <>
               <button
                 type="button"
                 onClick={() => setQrModalOpen(true)}
-                className="btn btn-sm btn-outline btn-primary flex-1 sm:flex-initial gap-1.5"
+                className="btn btn-sm btn-outline btn-primary gap-1.5 px-2.5 sm:px-3 text-xs sm:text-sm font-medium w-full sm:w-auto justify-center"
               >
-                <span className="icon-[tabler--qrcode] text-base" aria-hidden="true" />
-                <span>Código QR & Link</span>
+                <span className="icon-[tabler--qrcode] text-base shrink-0" aria-hidden="true" />
+                <span className="truncate">Código QR <span className="hidden sm:inline">& Link</span></span>
               </button>
               <Link
                 href={`/invitacion/${edificio.id}`}
                 target="_blank"
-                className="btn btn-sm btn-outline flex-1 sm:flex-initial gap-1.5"
+                className="btn btn-sm btn-outline gap-1.5 px-2.5 sm:px-3 text-xs sm:text-sm font-medium w-full sm:w-auto justify-center"
               >
-                <span className="icon-[tabler--external-link] text-base" aria-hidden="true" />
-                <span>Portal de Reservas</span>
+                <span className="icon-[tabler--external-link] text-base shrink-0" aria-hidden="true" />
+                <span className="truncate">Portal de Reservas</span>
               </Link>
             </>
           )}
           <Link
             href="/dashboard/zonas/create"
-            className="btn btn-sm btn-primary w-full sm:w-auto gap-1.5"
+            className="btn btn-sm btn-primary col-span-2 sm:col-span-1 w-full sm:w-auto gap-1.5 px-3 text-xs sm:text-sm font-medium justify-center"
           >
-            <span className="icon-[tabler--plus] text-base" aria-hidden="true" />
+            <span className="icon-[tabler--plus] text-base shrink-0" aria-hidden="true" />
             <span>Nueva Zona</span>
           </Link>
         </div>
@@ -200,6 +280,77 @@ export default function ZonasPage() {
         </div>
       )}
 
+      {/* Mini Panel de KPIs Operativos de Zonas */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* KPI 1: % Ocupación Actual */}
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-2xs sm:text-xs font-medium text-base-content/70">
+            <span className="icon-[tabler--gauge] text-base sm:text-lg text-primary" aria-hidden="true" />
+            <span>Ocupación Actual</span>
+          </div>
+          <div className={`mt-1.5 text-xl sm:text-2xl font-bold ${colorPct(stats.pctOcupacionAhora)}`}>
+            {stats.pctOcupacionAhora}%
+          </div>
+          <div
+            className="progress mt-2 h-1.5 bg-base-200"
+            role="progressbar"
+            aria-valuenow={stats.pctOcupacionAhora}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className={`progress-bar ${barraPct(stats.pctOcupacionAhora)}`}
+              style={{ width: `${Math.min(100, stats.pctOcupacionAhora)}%` }}
+            />
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-1 truncate">
+            {stats.ocupacionAhora} de {stats.totalAforo} cupos en uso
+          </div>
+        </div>
+
+        {/* KPI 2: Cupos en Uso */}
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-info text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--users] text-base sm:text-lg" aria-hidden="true" />
+            <span>Cupos en Uso</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-info">
+            {stats.ocupacionAhora}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            aforo actual utilizado
+          </div>
+        </div>
+
+        {/* KPI 3: Reservas Hoy */}
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-accent text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--calendar-check] text-base sm:text-lg" aria-hidden="true" />
+            <span>Reservas Hoy</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-accent">
+            {stats.reservasHoy}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            turnos activos del día
+          </div>
+        </div>
+
+        {/* KPI 4: Zonas en Mantenimiento */}
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-warning text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--tool] text-base sm:text-lg" aria-hidden="true" />
+            <span>En Mantenimiento</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-warning">
+            {stats.zonasMantenimiento}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            {stats.zonasMantenimiento === 1 ? '1 zona bloqueada' : `${stats.zonasMantenimiento} zonas bloqueadas`}
+          </div>
+        </div>
+      </div>
+
       {/* Listado de Zonas */}
       {loading ? (
         <div className="flex justify-center py-16">
@@ -219,19 +370,66 @@ export default function ZonasPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {zonas.map((z) => (
-            <div key={z._id} className="card bg-base-100 shadow-sm border border-base-200">
+            <div key={z._id} className={`card bg-base-100 shadow-sm border ${z.enMantenimiento ? 'border-warning/60 bg-warning/5' : 'border-base-200'} overflow-hidden`}>
+              {z.imagenes && z.imagenes.length > 0 && z.imagenes[0] && (
+                <div className="h-36 w-full overflow-hidden bg-base-200 relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={z.imagenes[0]}
+                    alt={z.nombre}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  {z.enMantenimiento && (
+                    <div className="absolute top-2 right-2 badge badge-warning gap-1 font-semibold shadow-xs">
+                      <span className="icon-[tabler--tool] text-xs" /> En Mantenimiento
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="card-body p-4 sm:p-5 flex flex-col justify-between gap-3">
                 <div>
-                  <h3 className="card-title text-base sm:text-lg font-bold">{z.nombre}</h3>
-                  {z.descripcion && (
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="card-title text-base sm:text-lg font-bold">{z.nombre}</h3>
+                    {z.enMantenimiento && (!z.imagenes || !z.imagenes.length) && (
+                      <span className="badge badge-warning badge-sm gap-1 shrink-0">
+                        <span className="icon-[tabler--tool] text-xs" /> Mantenimiento
+                      </span>
+                    )}
+                  </div>
+
+                  {z.enMantenimiento && (
+                    <div className="alert alert-warning py-2 px-3 text-xs rounded-xl mt-1.5 flex flex-col gap-0.5 shadow-2xs">
+                      <div className="flex items-center gap-1.5 font-semibold text-warning-content">
+                        <span className="icon-[tabler--tool] text-sm shrink-0" />
+                        <span>{z.motivoMantenimiento || 'En mantenimiento'}</span>
+                      </div>
+                      {z.mantenimientoFechaInicio && (
+                        <div className="text-2xs text-warning-content/85 pl-5 font-medium">
+                          Programado: {z.mantenimientoFechaInicio} {z.mantenimientoHoraInicio || ''} al {z.mantenimientoFechaFin || ''} {z.mantenimientoHoraFin || ''}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {z.politicasUso ? (
+                    <div className="text-xs text-base-content/70 bg-base-200/50 p-2 rounded-md mt-2">
+                      <span className="font-semibold text-primary block mb-0.5">Políticas de Uso:</span>
+                      <p className="line-clamp-2">{z.politicasUso}</p>
+                    </div>
+                  ) : z.descripcion ? (
                     <p className="text-xs sm:text-sm text-base-content/60 mt-1 line-clamp-2">
                       {z.descripcion}
                     </p>
-                  )}
+                  ) : null}
+
                   <div className="flex flex-wrap gap-2 text-xs mt-3">
-                    <span className="badge badge-outline badge-sm">Aforo: {z.aforoMaximo}</span>
+                    <span className="badge badge-outline badge-sm">Aforo: {z.aforoMaximo} personas</span>
                     <span className="badge badge-outline badge-sm">Lapso: {z.lapsoMinutos} min</span>
                   </div>
+
                   {z.horarios && z.horarios.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2.5">
                       {z.horarios.map((h) => (
@@ -242,27 +440,51 @@ export default function ZonasPage() {
                     </div>
                   )}
                 </div>
-                <div className="pt-3 border-t border-base-200 flex items-center justify-end gap-2">
-                  <Link
-                    href={`/dashboard/zonas/${z._id}/edit`}
-                    className="btn btn-outline btn-sm gap-1"
-                  >
-                    <span className="icon-[tabler--edit] text-base" aria-hidden="true" />
-                    Editar
-                  </Link>
+
+                <div className="pt-3 border-t border-base-200 flex flex-wrap items-center justify-between gap-2">
                   <button
-                    onClick={() => eliminar(z._id, z.nombre)}
-                    className="btn btn-outline btn-error btn-sm gap-1"
+                    type="button"
+                    onClick={() => abrirModalMantenimiento(z)}
+                    className={`btn btn-xs ${
+                      z.enMantenimiento
+                        ? 'btn-warning font-semibold shadow-2xs'
+                        : 'btn-outline text-base-content/70 hover:text-base-content'
+                    } gap-1`}
+                    title="Programar o gestionar mantenimiento"
                   >
-                    <span className="icon-[tabler--trash] text-base" aria-hidden="true" />
-                    Eliminar
+                    <span className="icon-[tabler--tool] text-xs" />
+                    <span>{z.enMantenimiento ? 'En Mantenimiento' : 'Mantenimiento'}</span>
                   </button>
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      href={`/dashboard/zonas/${z._id}/edit`}
+                      className="btn btn-outline btn-xs gap-1"
+                    >
+                      <span className="icon-[tabler--edit] text-xs" />
+                      Editar
+                    </Link>
+                    <button
+                      onClick={() => eliminar(z._id, z.nombre)}
+                      className="btn btn-outline btn-error btn-xs gap-1"
+                    >
+                      <span className="icon-[tabler--trash] text-xs" />
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Modal para Programar Mantenimiento */}
+      <ModalProgramarMantenimiento
+        isOpen={Boolean(zonaMantenimiento)}
+        zona={zonaMantenimiento}
+        onClose={() => setZonaMantenimiento(null)}
+        onSuccess={cargar}
+      />
     </div>
   );
 }

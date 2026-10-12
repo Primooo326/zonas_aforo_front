@@ -731,7 +731,7 @@ export default function NuevoCensoPage() {
 
         {/* Botones de acción */}
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3">
-          <Link href="/dashboard/censo" className="btn btn-ghost btn-sm w-full sm:w-auto justify-center">
+          <Link href="/dashboard/censo" className="btn btn-outline btn-sm w-full sm:w-auto justify-center">
             Cancelar
           </Link>
           <button type="submit" disabled={submitting} className="btn btn-primary btn-sm w-full sm:w-auto justify-center">

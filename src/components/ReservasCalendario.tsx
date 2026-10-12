@@ -157,7 +157,7 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
       colorPorZona[z._id] = colorDeZona(z._id);
     });
     const eventos = reservas
-      .filter((r) => r.estado === 'activa')
+      .filter((r) => r.estado === 'activa' || r.estado === 'aprobada')
       .map((r) => {
         const zonaId = r.zonaId?._id || '';
         return {
@@ -199,6 +199,49 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
     setFecha(schedRef.current.value || hoyISO());
   };
 
+  const aprobar = async (id: string) => {
+    try {
+      await apiFetch(`/reservas/${id}/aprobar`, { method: 'POST' });
+      setReservas((prev) =>
+        prev.map((r) => (r._id === id ? { ...r, estado: 'aprobada' } : r)),
+      );
+      if (detalle?._id === id) {
+        setDetalle((prev) => (prev ? { ...prev, estado: 'aprobada' } : null));
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al aprobar reserva');
+    }
+  };
+
+  const rechazar = async (id: string) => {
+    const motivo = prompt('Motivo del rechazo de la reserva:') || 'Rechazada por administración';
+    try {
+      await apiFetch(`/reservas/${id}/rechazar`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo }),
+      });
+      setReservas((prev) =>
+        prev.map((r) => (r._id === id ? { ...r, estado: 'rechazada' } : r)),
+      );
+      setDetalle(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al rechazar reserva');
+    }
+  };
+
+  const cancelar = async (id: string) => {
+    if (!confirm('¿Deseas cancelar esta reserva?')) return;
+    try {
+      await apiFetch(`/reservas/${id}/cancelar`, { method: 'POST' });
+      setReservas((prev) =>
+        prev.map((r) => (r._id === id ? { ...r, estado: 'cancelada' } : r)),
+      );
+      setDetalle(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al cancelar reserva');
+    }
+  };
+
   return (
     <div className="bg-base-100 rounded-box shadow-sm p-4">
       <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -209,26 +252,26 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex w-full sm:w-auto">
             <button
-              className={`btn btn-sm flex-1 sm:flex-none rounded-none rounded-s-full ${tipo === 'week' ? 'btn-active' : ''}`}
+              className={`btn btn-sm flex-1 sm:flex-none rounded-none rounded-s-full ${tipo === 'week' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setTipo('week')}
             >
               Semana
             </button>
             <button
-              className={`btn btn-sm flex-1 sm:flex-none rounded-none rounded-e-full ${tipo === 'day' ? 'btn-active' : ''}`}
+              className={`btn btn-sm flex-1 sm:flex-none rounded-none rounded-e-full ${tipo === 'day' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setTipo('day')}
             >
               Día
             </button>
           </div>
           <div className="flex w-full sm:w-auto">
-            <button className="btn btn-sm flex-1 sm:flex-none rounded-none rounded-s-full" onClick={() => navegar('prev')}>
+            <button className="btn btn-sm btn-outline flex-1 sm:flex-none rounded-none rounded-s-full" onClick={() => navegar('prev')}>
               ←
             </button>
-            <button className="btn btn-sm flex-1 sm:flex-none rounded-none" onClick={irHoy}>
+            <button className="btn btn-sm btn-outline flex-1 sm:flex-none rounded-none" onClick={irHoy}>
               Hoy
             </button>
-            <button className="btn btn-sm flex-1 sm:flex-none rounded-none rounded-e-full" onClick={() => navegar('next')}>
+            <button className="btn btn-sm btn-outline flex-1 sm:flex-none rounded-none rounded-e-full" onClick={() => navegar('next')}>
               →
             </button>
           </div>
@@ -299,8 +342,39 @@ export default function ReservasCalendario({ edificioId }: { edificioId: string 
                 </div>
               )}
             </div>
-            <div className="modal-action">
-              <button className="btn" onClick={() => setDetalle(null)}>
+            <div className="modal-action flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                {detalle.estado !== 'aprobada' && detalle.estado !== 'rechazada' && detalle.estado !== 'cancelada' && (
+                  <button
+                    type="button"
+                    onClick={() => aprobar(detalle._id)}
+                    className="btn btn-sm btn-success gap-1 text-xs"
+                  >
+                    <span className="icon-[tabler--check] text-sm" />
+                    Aprobar
+                  </button>
+                )}
+                {detalle.estado !== 'rechazada' && detalle.estado !== 'cancelada' && (
+                  <button
+                    type="button"
+                    onClick={() => rechazar(detalle._id)}
+                    className="btn btn-sm btn-outline btn-error gap-1 text-xs"
+                  >
+                    <span className="icon-[tabler--x] text-sm" />
+                    Rechazar
+                  </button>
+                )}
+                {detalle.estado === 'aprobada' && (
+                  <button
+                    type="button"
+                    onClick={() => cancelar(detalle._id)}
+                    className="btn btn-sm btn-ghost text-error text-xs"
+                  >
+                    Cancelar Reserva
+                  </button>
+                )}
+              </div>
+              <button className="btn btn-sm btn-outline" onClick={() => setDetalle(null)}>
                 Cerrar
               </button>
             </div>

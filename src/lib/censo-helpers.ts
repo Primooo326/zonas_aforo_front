@@ -6,8 +6,11 @@ export interface Persona {
   email?: string;
   documento?: string;
   fechaNacimiento: string;
-  condicion: 'propietario' | 'arrendatario' | 'conviviente';
+  condicion: 'propietario' | 'arrendatario' | 'habitante' | 'visitante' | 'conviviente';
   esContactoPrincipal?: boolean;
+  discapacidad?: boolean;
+  condicionEspecial?: string;
+  adjuntoCedulaUrl?: string;
 }
 
 export interface Mascota {
@@ -15,8 +18,11 @@ export interface Mascota {
   nombre: string;
   raza: string;
   esPeligroso: boolean;
+  esManejoEspecial?: boolean;
   vacunasAlDia: boolean;
   observaciones?: string;
+  adjuntoCarnetVacunacionUrl?: string;
+  adjuntoPolizaUrl?: string;
 }
 
 export interface Vehiculo {
@@ -27,6 +33,8 @@ export interface Vehiculo {
   color?: string;
   parqueaEnEdificio: boolean;
   numeroParqueadero?: string;
+  esPropietarioResidente?: boolean;
+  adjuntoTarjetaPropiedadUrl?: string;
 }
 
 export interface ParqueaderoAsignado {
@@ -62,6 +70,8 @@ export interface CensoUnidad {
   vehiculos: Vehiculo[];
   estado: 'aprobado' | 'pendiente' | 'pendiente_actualizacion' | 'rechazado';
   unidadOriginalId?: string;
+  adjuntoCertificadoLibertadUrl?: string;
+  tags?: string[];
   notasAdministracion?: string;
   createdAt: string;
   updatedAt: string;

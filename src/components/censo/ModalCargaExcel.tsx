@@ -212,88 +212,111 @@ export default function ModalCargaExcel({
         ) : (
           /* Formulario de Carga y Descarga */
           <div className="space-y-5">
-            {/* Paso 1: Descargar plantilla */}
-            <div className="p-4 rounded-xl bg-base-200/40 border border-base-200 space-y-3">
-              <div className="space-y-0.5">
-                <div className="text-sm font-semibold text-base-content flex items-center gap-1.5">
-                  <span className="icon-[tabler--template] text-primary" />
-                  1. Descargar Plantilla Oficial Excel
+            {!parsedData ? (
+              <>
+                {/* Paso 1: Descargar plantilla */}
+                <div className="p-4 rounded-xl bg-base-200/40 border border-base-200 space-y-3">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-semibold text-base-content flex items-center gap-1.5">
+                      <span className="icon-[tabler--template] text-primary" />
+                      1. Descargar Plantilla Oficial Excel
+                    </div>
+                    <p className="text-xs text-base-content/70">
+                      Selecciona la plantilla según el alcance que desees registrar con filas de ejemplo y formatos normalizados:
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => descargarPlantillaExcel(edificioNombre)}
+                      className="btn btn-sm btn-outline gap-1.5 flex-1 justify-center"
+                      title="3 Hojas: Inmuebles, Parqueaderos y Bodegas"
+                    >
+                      <span className="icon-[tabler--file-spreadsheet] text-base" />
+                      <span className="truncate">Plantilla Básica (3 Hojas)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => descargarPlantillaCompletaExcel(edificioNombre)}
+                      className="btn btn-sm btn-primary gap-1.5 flex-1 justify-center"
+                      title="6 Hojas: Inmuebles, Residentes, Mascotas, Vehículos, Parqueaderos y Bodegas"
+                    >
+                      <span className="icon-[tabler--sparkles] text-base" />
+                      <span className="truncate">Plantilla Completa (6 Hojas)</span>
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-base-content/70">
-                  Selecciona la plantilla según el alcance que desees registrar con filas de ejemplo y formatos normalizados:
-                </p>
-              </div>
 
-              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                {/* Paso 2: Zona Drag and Drop */}
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-base-content flex items-center gap-1.5">
+                    <span className="icon-[tabler--upload] text-primary" />
+                    2. Subir Archivo Diligenciado
+                  </div>
+
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                      file
+                        ? 'border-primary/50 bg-primary/5'
+                        : 'border-base-content/20 hover:border-primary/50 hover:bg-base-200/30'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx, .xls"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+
+                    <span className="icon-[tabler--cloud-upload] text-3xl text-primary mx-auto mb-2 block" />
+
+                    {file ? (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-base-content">{file.name}</p>
+                        <p className="text-xs text-base-content/60">
+                          {(file.size / 1024).toFixed(1)} KB — Clic para cambiar de archivo
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-base-content">
+                          Arrastra y suelta tu archivo Excel aquí, o{' '}
+                          <span className="text-primary underline">haz clic para examinar</span>
+                        </p>
+                        <p className="text-2xs text-base-content/60">
+                          Formatos compatibles: .xlsx o .xls
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Banner Compacto de Archivo Subido para Maximizar Vista de Cards */
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-primary/10 border border-primary/20 text-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="icon-[tabler--file-spreadsheet] text-success text-2xl shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-bold text-base-content truncate">{file?.name}</div>
+                    <div className="text-xs text-base-content/60">{((file?.size || 0) / 1024).toFixed(1)} KB — Listo para importar</div>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={() => descargarPlantillaExcel(edificioNombre)}
-                  className="btn btn-sm btn-outline gap-1.5 flex-1 justify-center"
-                  title="3 Hojas: Inmuebles, Parqueaderos y Bodegas"
+                  onClick={reiniciar}
+                  className="btn btn-outline btn-xs btn-primary shrink-0 gap-1"
                 >
-                  <span className="icon-[tabler--file-spreadsheet] text-base" />
-                  <span className="truncate">Plantilla Básica (3 Hojas)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => descargarPlantillaCompletaExcel(edificioNombre)}
-                  className="btn btn-sm btn-primary gap-1.5 flex-1 justify-center"
-                  title="6 Hojas: Inmuebles, Residentes, Mascotas, Vehículos, Parqueaderos y Bodegas"
-                >
-                  <span className="icon-[tabler--sparkles] text-base" />
-                  <span className="truncate">Plantilla Completa (6 Hojas)</span>
+                  <span className="icon-[tabler--refresh] text-xs" />
+                  Cambiar archivo
                 </button>
               </div>
-            </div>
-
-            {/* Paso 2: Zona Drag and Drop */}
-            <div className="space-y-2">
-              <div className="text-sm font-semibold text-base-content flex items-center gap-1.5">
-                <span className="icon-[tabler--upload] text-primary" />
-                2. Subir Archivo Diligenciado
-              </div>
-
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                  file
-                    ? 'border-primary/50 bg-primary/5'
-                    : 'border-base-content/20 hover:border-primary/50 hover:bg-base-200/30'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx, .xls"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-
-                <span className="icon-[tabler--cloud-upload] text-3xl text-primary mx-auto mb-2 block" />
-
-                {file ? (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-base-content">{file.name}</p>
-                    <p className="text-xs text-base-content/60">
-                      {(file.size / 1024).toFixed(1)} KB — Clic para cambiar de archivo
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-base-content">
-                      Arrastra y suelta tu archivo Excel aquí, o{' '}
-                      <span className="text-primary underline">haz clic para examinar</span>
-                    </p>
-                    <p className="text-2xs text-base-content/60">
-                      Formatos compatibles: .xlsx o .xls
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Estado de Lectura */}
             {parsing && (
@@ -414,7 +437,7 @@ export default function ModalCargaExcel({
               <button
                 type="button"
                 onClick={onClose}
-                className="btn btn-sm btn-ghost w-full sm:w-auto justify-center"
+                className="btn btn-sm btn-outline w-full sm:w-auto justify-center"
                 disabled={submitting}
               >
                 Cancelar

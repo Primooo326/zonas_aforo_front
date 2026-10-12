@@ -60,3 +60,37 @@
     font-size: 0.7em;
   }
 }
+
+/* ============================================================== */
+/* FIX: Soporte de btn-ghost para FlyonUI                          */
+/* Evita que los botones ghost o sin variante hereden el fondo    */
+/* negro por defecto de FlyonUI (var(--color-neutral)).           */
+/* ============================================================== */
+.btn.btn-ghost,
+.btn-ghost {
+  --btn-bg: transparent !important;
+  --btn-border: transparent !important;
+  --btn-shadow: none !important;
+  --btn-color: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: inherit !important;
+}
+
+.btn.btn-ghost:hover,
+.btn-ghost:hover {
+  --btn-bg: color-mix(in oklab, var(--color-base-content, #000) 10%, transparent) !important;
+  background-color: color-mix(in oklab, var(--color-base-content, #000) 10%, transparent) !important;
+  border-color: transparent !important;
+}
+
+.btn.btn-ghost:active,
+.btn.btn-ghost:focus-visible,
+.btn-ghost:active,
+.btn-ghost:focus-visible {
+  --btn-bg: color-mix(in oklab, var(--color-base-content, #000) 15%, transparent) !important;
+  background-color: color-mix(in oklab, var(--color-base-content, #000) 15%, transparent) !important;
+  border-color: transparent !important;
+}

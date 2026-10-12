@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +40,7 @@ const tipoBadge = (tipo: string) => {
 
 export default function InmueblesPage() {
   const { edificio } = useAuth();
-  const [inmuebles, setInmuebles] = useState<Inmueble[]>([]);
+  const [todosInmuebles, setTodosInmuebles] = useState<Inmueble[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroTrans, setFiltroTrans] = useState('');
@@ -77,11 +77,10 @@ export default function InmueblesPage() {
 
   const cargar = () => {
     if (!edificio) return;
-    const params = new URLSearchParams({ edificioId: edificio.id });
-    if (filtroTipo) params.set('tipo', filtroTipo);
-    if (filtroTrans) params.set('transaccion', filtroTrans);
-    apiFetch(`/inmuebles?${params.toString()}`)
-      .then(setInmuebles)
+    apiFetch(`/inmuebles?edificioId=${edificio.id}`)
+      .then((data) => {
+        setTodosInmuebles(Array.isArray(data) ? data : []);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
@@ -89,7 +88,29 @@ export default function InmueblesPage() {
   useEffect(() => {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edificio, filtroTipo, filtroTrans]);
+  }, [edificio]);
+
+  const stats = useMemo(() => {
+    const total = todosInmuebles.length;
+    const enVenta = todosInmuebles.filter(
+      (i) => i.transaccion === 'venta' && (i.estado === 'activa' || !i.estado),
+    ).length;
+    const enArriendo = todosInmuebles.filter(
+      (i) => i.transaccion === 'arriendo' && (i.estado === 'activa' || !i.estado),
+    ).length;
+    const cerradas = todosInmuebles.filter(
+      (i) => i.estado === 'vendida' || i.estado === 'arrendada',
+    ).length;
+    return { total, enVenta, enArriendo, cerradas };
+  }, [todosInmuebles]);
+
+  const inmueblesFiltrados = useMemo(() => {
+    return todosInmuebles.filter((item) => {
+      if (filtroTipo && item.tipo !== filtroTipo) return false;
+      if (filtroTrans && item.transaccion !== filtroTrans) return false;
+      return true;
+    });
+  }, [todosInmuebles, filtroTipo, filtroTrans]);
 
   const eliminar = async (id: string) => {
     if (!confirm('¿Eliminar esta publicación?')) return;
@@ -108,40 +129,43 @@ export default function InmueblesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Encabezado */}
+      {/* Encabezado y Acciones */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Venta y Arriendo</h1>
-          <p className="text-xs sm:text-sm text-base-content/60">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-base-content flex items-center gap-2">
+            <span className="icon-[tabler--home-dollar] text-primary text-2xl sm:text-3xl shrink-0" aria-hidden="true" />
+            <span>Venta y Arriendo</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-base-content/70 mt-0.5">
             Gestiona las ofertas en venta y arriendo de tu edificio
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:items-center sm:w-auto">
           {edificio?.id && (
             <>
               <button
                 type="button"
                 onClick={() => setQrModalOpen(true)}
-                className="btn btn-sm btn-outline btn-primary flex-1 sm:flex-initial gap-1.5"
+                className="btn btn-sm btn-outline btn-primary gap-1.5 px-2.5 sm:px-3 text-xs sm:text-sm font-medium w-full sm:w-auto justify-center"
               >
-                <span className="icon-[tabler--qrcode] text-base" aria-hidden="true" />
-                <span>Código QR & Link</span>
+                <span className="icon-[tabler--qrcode] text-base shrink-0" aria-hidden="true" />
+                <span className="truncate">Código QR <span className="hidden sm:inline">& Link</span></span>
               </button>
               <Link
                 href={`/inmuebles/${edificio.id}`}
                 target="_blank"
-                className="btn btn-sm btn-outline flex-1 sm:flex-initial gap-1.5"
+                className="btn btn-sm btn-outline gap-1.5 px-2.5 sm:px-3 text-xs sm:text-sm font-medium w-full sm:w-auto justify-center"
               >
-                <span className="icon-[tabler--external-link] text-base" aria-hidden="true" />
-                <span>Ver Catálogo</span>
+                <span className="icon-[tabler--external-link] text-base shrink-0" aria-hidden="true" />
+                <span className="truncate">Ver Catálogo</span>
               </Link>
             </>
           )}
           <Link
             href="/dashboard/inmuebles/nuevo"
-            className="btn btn-sm btn-primary w-full sm:w-auto gap-1.5"
+            className="btn btn-sm btn-primary col-span-2 sm:col-span-1 w-full sm:w-auto gap-1.5 px-3 text-xs sm:text-sm font-medium justify-center"
           >
-            <span className="icon-[tabler--plus] text-base" aria-hidden="true" />
+            <span className="icon-[tabler--plus] text-base shrink-0" aria-hidden="true" />
             <span>Nueva Publicación</span>
           </Link>
         </div>
@@ -229,6 +253,61 @@ export default function InmueblesPage() {
         </div>
       )}
 
+      {/* Tarjetas KPI Venta y Arriendo */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-primary text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--building] text-base sm:text-lg" aria-hidden="true" />
+            <span>Total Publicaciones</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-base-content">
+            {stats.total}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            registradas en catálogo
+          </div>
+        </div>
+
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-success text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--tag] text-base sm:text-lg" aria-hidden="true" />
+            <span>En Venta</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-success">
+            {stats.enVenta}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            ofertas activas
+          </div>
+        </div>
+
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-info text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--key] text-base sm:text-lg" aria-hidden="true" />
+            <span>En Arriendo</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-info">
+            {stats.enArriendo}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            ofertas activas
+          </div>
+        </div>
+
+        <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 text-warning text-2xs sm:text-xs font-medium">
+            <span className="icon-[tabler--circle-check] text-base sm:text-lg" aria-hidden="true" />
+            <span>Cerradas</span>
+          </div>
+          <div className="mt-1.5 text-xl sm:text-2xl font-bold text-warning">
+            {stats.cerradas}
+          </div>
+          <div className="text-3xs sm:text-xs text-base-content/50 mt-0.5 truncate">
+            vendidas o arrendadas
+          </div>
+        </div>
+      </div>
+
       {/* Barra de Filtros */}
       <div className="bg-base-100 p-3.5 rounded-box shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -253,7 +332,7 @@ export default function InmueblesPage() {
           </select>
         </div>
         <div className="text-xs text-base-content/60 text-right sm:text-left">
-          {inmuebles.length} {inmuebles.length === 1 ? 'publicación' : 'publicaciones'}
+          {inmueblesFiltrados.length} {inmueblesFiltrados.length === 1 ? 'publicación' : 'publicaciones'}
         </div>
       </div>
 
@@ -262,7 +341,7 @@ export default function InmueblesPage() {
         <div className="flex justify-center py-16">
           <span className="loading loading-spinner loading-lg text-primary"></span>
         </div>
-      ) : inmuebles.length === 0 ? (
+      ) : inmueblesFiltrados.length === 0 ? (
         <div className="bg-base-100 rounded-box shadow-sm p-8 sm:p-12 text-center">
           <div className="flex justify-center mb-3">
             <span className="icon-[tabler--building] text-5xl text-base-content/30" aria-hidden="true" />
@@ -275,7 +354,7 @@ export default function InmueblesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {inmuebles.map((item) => (
+          {inmueblesFiltrados.map((item) => (
             <div
               key={item._id}
               className="card bg-base-100 shadow-sm hover:shadow-md transition-all duration-200 border border-base-200 flex flex-col overflow-hidden"

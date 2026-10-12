@@ -29,9 +29,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const links = [
     { href: '/dashboard', label: 'Panel de Control', icon: 'icon-[tabler--layout-dashboard]' },
-    { href: '/dashboard/zonas', label: 'Zonas', icon: 'icon-[tabler--map-pin]' },
-    { href: '/dashboard/inmuebles', label: 'Venta y Arriendo', icon: 'icon-[tabler--building]' },
-    { href: '/dashboard/censo', label: 'Censo y Residentes', icon: 'icon-[tabler--users-group]' },
+    { href: '/dashboard/zonas', label: 'Zonas Comunes & Reservas', icon: 'icon-[tabler--calendar-event]' },
+    { href: '/dashboard/censo', label: 'Censo e Inmuebles', icon: 'icon-[tabler--building-community]' },
+    { href: '/dashboard/inmuebles', label: 'Venta y Arriendo', icon: 'icon-[tabler--home-dollar]' },
   ];
 
   const closeDrawer = () => {
@@ -82,15 +82,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside
         id="dashboard-drawer"
-        className="overlay overlay-open:translate-x-0 drawer drawer-start hidden w-64 [--auto-close:lg] lg:flex lg:translate-x-0 lg:static lg:shadow-none"
+        className="overlay overlay-open:translate-x-0 drawer drawer-start hidden w-64 bg-base-100 border-r border-base-200 shadow-sm [--auto-close:lg] lg:flex lg:translate-x-0 lg:static lg:shadow-none flex-col"
         role="dialog"
         aria-label="Menú de navegación"
         tabIndex={-1}
       >
-        <div className="drawer-header">
-          <div className="min-w-0">
-            <h2 className="drawer-title truncate">{edificio.nombre}</h2>
-            <p className="truncate text-sm text-base-content/60">{edificio.email}</p>
+        <div className="drawer-header border-b border-base-200 px-4 py-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="drawer-title text-base font-bold text-base-content truncate">{edificio.nombre}</h2>
+            <p className="truncate text-xs text-base-content/60 mt-0.5">{edificio.email}</p>
           </div>
           <button
             type="button"
@@ -101,23 +101,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="icon-[tabler--x] text-xl" aria-hidden="true" />
           </button>
         </div>
-        <div className="drawer-body flex flex-col gap-1">
-          <nav className="flex flex-col gap-1">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={closeDrawer}
-                className={`btn btn-ghost btn-md justify-start ${pathname === link.href ? 'btn-active' : ''}`}
-              >
-                <span className={`${link.icon} text-lg`} aria-hidden="true" />
-                {link.label}
-              </Link>
-            ))}
+
+        <div className="drawer-body px-3 py-3 flex-1 overflow-y-auto">
+          <nav className="flex flex-col gap-1.5">
+            {links.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={closeDrawer}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-primary text-white shadow-sm font-bold'
+                      : 'text-base-content/75 hover:text-base-content hover:bg-base-200/80 bg-transparent'
+                  }`}
+                >
+                  <span
+                    className={`${link.icon} text-xl shrink-0 ${
+                      isActive ? 'text-white' : 'text-base-content/60'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{link.label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
-        <div className="drawer-footer">
-          <button onClick={logout} className="btn btn-outline btn-error w-full">
+
+        <div className="drawer-footer border-t border-base-200 p-4">
+          <button onClick={logout} className="btn btn-outline btn-error btn-sm w-full gap-2 font-medium">
             <span className="icon-[tabler--logout] text-lg" aria-hidden="true" />
             Cerrar Sesión
           </button>
