@@ -12,6 +12,7 @@ import {
   validarTelefono,
   validarPlaca,
 } from '@/lib/censo-helpers';
+import SelectorParqueadero, { ParqueaderoOpcion } from '@/components/censo/SelectorParqueadero';
 
 interface PersonaForm {
   nombreCompleto: string;
@@ -94,16 +95,23 @@ export default function PublicCensoPage() {
   const [tieneVehiculos, setTieneVehiculos] = useState(false);
   const [vehiculos, setVehiculos] = useState<VehiculoForm[]>([]);
 
+  // Parqueaderos disponibles
+  const [parqueaderosInventario, setParqueaderosInventario] = useState<ParqueaderoOpcion[]>([]);
+
   useEffect(() => {
     if (!buildingId) return;
     Promise.all([
       apiFetch(`/edificio/${buildingId}`).catch(() => ({})),
       apiFetch(`/censo/public/${buildingId}/unidades`).catch(() => []),
+      apiFetch(`/censo/public/${buildingId}/parqueaderos`).catch(() => []),
     ])
-      .then(([edificioData, catalogoData]) => {
+      .then(([edificioData, catalogoData, parkingsData]) => {
         if (edificioData?.nombre) setEdificioNombre(edificioData.nombre);
         if (Array.isArray(catalogoData)) {
           setCatalogo(catalogoData);
+        }
+        if (Array.isArray(parkingsData)) {
+          setParqueaderosInventario(parkingsData);
         }
       })
       .catch((e) => console.error('Error cargando datos del censo:', e))
@@ -326,9 +334,47 @@ export default function PublicCensoPage() {
     setVehiculos(vehiculos.filter((_, i) => i !== index));
   };
 
+  const selectedUnidad = useMemo(() => {
+    return catalogo.find((u) => u._id === selectedUnidadId);
+  }, [catalogo, selectedUnidadId]);
+
   const actualizarVehiculo = (index: number, campo: keyof VehiculoForm, valor: string | boolean) => {
     const copia = [...vehiculos];
     copia[index] = { ...copia[index], [campo]: valor };
+
+    if (campo === 'parqueaEnEdificio') {
+      if (valor === true) {
+        if (!copia[index].numeroParqueadero) {
+          const usados = new Set(
+            copia
+              .filter((veh, idx) => idx !== index && veh.parqueaEnEdificio && veh.numeroParqueadero)
+              .map((veh) => veh.numeroParqueadero.trim().toUpperCase()),
+          );
+          const asignadosUnidad = selectedUnidad?.parqueaderosAsignados || [];
+          const asignadoLibre = asignadosUnidad.find(
+            (p) => p.numero && !usados.has(p.numero.trim().toUpperCase()),
+          );
+          if (asignadoLibre) {
+            copia[index].numeroParqueadero = asignadoLibre.numero.trim();
+          } else {
+            const matchApto = parqueaderosInventario.find(
+              (p) =>
+                p.numero &&
+                !usados.has(p.numero.trim().toUpperCase()) &&
+                numeroApto &&
+                p.aptoAsignado &&
+                p.aptoAsignado.toLowerCase() === numeroApto.toLowerCase(),
+            );
+            if (matchApto) {
+              copia[index].numeroParqueadero = matchApto.numero.trim();
+            }
+          }
+        }
+      } else {
+        copia[index].numeroParqueadero = '';
+      }
+    }
+
     setVehiculos(copia);
   };
 
@@ -1059,7 +1105,7 @@ export default function PublicCensoPage() {
                       </div>
                     </div>
 
-                    <div className="pt-1">
+                    <div className="pt-1 space-y-1.5">
                       <label className="flex items-center gap-2 text-sm cursor-pointer select-none font-medium">
                         <input
                           type="checkbox"
@@ -1070,13 +1116,20 @@ export default function PublicCensoPage() {
                         <span>Estaciona dentro del edificio/conjunto</span>
                       </label>
                       {v.parqueaEnEdificio && (
-                        <input
-                          type="text"
-                          value={v.numeroParqueadero}
-                          onChange={(e) => actualizarVehiculo(idx, 'numeroParqueadero', e.target.value)}
-                          placeholder="Número o lugar de parqueadero"
-                          className="input input-sm w-full font-medium mt-1.5"
-                        />
+                        <div className="mt-1">
+                          <SelectorParqueadero
+                            value={v.numeroParqueadero}
+                            onChange={(val) => actualizarVehiculo(idx, 'numeroParqueadero', val)}
+                            tipoVehiculo={v.tipo}
+                            parqueaderosInventario={parqueaderosInventario}
+                            parqueaderosAsignadosUnidad={selectedUnidad?.parqueaderosAsignados || []}
+                            torreUnidad={torre}
+                            aptoUnidad={numeroApto}
+                            vehiculosEnFormulario={vehiculos}
+                            vehiculoIndex={idx}
+                            size="sm"
+                          />
+                        </div>
                       )}
                     </div>
                   </div>

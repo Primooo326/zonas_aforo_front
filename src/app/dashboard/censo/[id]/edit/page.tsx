@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
@@ -17,6 +17,7 @@ import {
   validarTelefono,
   validarPlaca,
 } from '@/lib/censo-helpers';
+import SelectorParqueadero, { ParqueaderoOpcion } from '@/components/censo/SelectorParqueadero';
 
 interface PersonaForm {
   nombreCompleto: string;
@@ -69,12 +70,39 @@ export default function EditarCensoPage() {
   // Vehículos
   const [vehiculos, setVehiculos] = useState<VehiculoForm[]>([]);
 
+  // Parqueaderos y Bodegas
+  interface BodegaInventarioItem {
+    _id?: string;
+    numero: string;
+    ubicacion?: string;
+    metrosCuadrados?: number;
+    torreAsignada?: string;
+    aptoAsignado?: string;
+  }
+
+  const [parqueaderosInventario, setParqueaderosInventario] = useState<ParqueaderoOpcion[]>([]);
+  const [parqueaderosAsignadosUnidad, setParqueaderosAsignadosUnidad] = useState<{ numero: string; tipo?: string; esCubierto?: boolean }[]>([]);
+  const [bodegasInventario, setBodegasInventario] = useState<BodegaInventarioItem[]>([]);
+  const [bodegasAsignadasUnidad, setBodegasAsignadasUnidad] = useState<{ numero: string; ubicacion?: string; metrosCuadrados?: number }[]>([]);
+
+  const [parqueaderoPorAsignar, setParqueaderoPorAsignar] = useState('');
+  const [bodegaPorAsignar, setBodegaPorAsignar] = useState('');
+
   useEffect(() => {
     if (!id) return;
     const cargar = async () => {
       try {
         setLoading(true);
-        const data: CensoUnidad = await apiFetch(`/censo/${id}`);
+        const [data, invParqueaderos, invBodegas]: [CensoUnidad, ParqueaderoOpcion[], BodegaInventarioItem[]] = await Promise.all([
+          apiFetch(`/censo/${id}`),
+          apiFetch('/censo/parqueaderos').catch(() => []),
+          apiFetch('/censo/bodegas').catch(() => []),
+        ]);
+        setParqueaderosInventario(Array.isArray(invParqueaderos) ? invParqueaderos : []);
+        setParqueaderosAsignadosUnidad(data.parqueaderosAsignados || []);
+        setBodegasInventario(Array.isArray(invBodegas) ? invBodegas : []);
+        setBodegasAsignadasUnidad(data.bodegasAsignadas || []);
+
         setIdentificador(data.identificador || '');
         setTorre(data.torre || '');
         setNumeroApto(data.numeroApto || '');
@@ -245,8 +273,102 @@ export default function EditarCensoPage() {
   const actualizarVehiculo = (index: number, campo: keyof VehiculoForm, valor: string | boolean) => {
     const copia = [...vehiculos];
     copia[index] = { ...copia[index], [campo]: valor };
+
+    if (campo === 'parqueaEnEdificio') {
+      if (valor === true) {
+        // Si no tiene número de parqueadero asignado aún, intentar autoseleccionar uno asignado libre
+        if (!copia[index].numeroParqueadero) {
+          const usados = new Set(
+            copia
+              .filter((veh, idx) => idx !== index && veh.parqueaEnEdificio && veh.numeroParqueadero)
+              .map((veh) => veh.numeroParqueadero.trim().toUpperCase()),
+          );
+          const asignadoLibre = parqueaderosAsignadosUnidad.find(
+            (p) => p.numero && !usados.has(p.numero.trim().toUpperCase()),
+          );
+          if (asignadoLibre) {
+            copia[index].numeroParqueadero = asignadoLibre.numero.trim();
+          }
+        }
+      } else {
+        copia[index].numeroParqueadero = '';
+      }
+    }
+
     setVehiculos(copia);
   };
+
+  // Helper Parqueaderos
+  const quitarParqueadero = (num: string) => {
+    setParqueaderosAsignadosUnidad((prev) =>
+      prev.filter((p) => p.numero.trim().toUpperCase() !== num.trim().toUpperCase()),
+    );
+  };
+
+  const asignarParqueadero = () => {
+    if (!parqueaderoPorAsignar) return;
+    const item = parqueaderosInventario.find(
+      (p) => p.numero.trim().toUpperCase() === parqueaderoPorAsignar.trim().toUpperCase(),
+    );
+    if (item) {
+      if (!parqueaderosAsignadosUnidad.some((p) => p.numero.trim().toUpperCase() === item.numero.trim().toUpperCase())) {
+        setParqueaderosAsignadosUnidad([
+          ...parqueaderosAsignadosUnidad,
+          {
+            numero: item.numero.trim(),
+            tipo: item.tipo || 'carro',
+            esCubierto: item.esCubierto ?? true,
+          },
+        ]);
+      }
+    }
+    setParqueaderoPorAsignar('');
+  };
+
+  // Helper Bodegas
+  const quitarBodega = (num: string) => {
+    setBodegasAsignadasUnidad((prev) =>
+      prev.filter((b) => b.numero.trim().toUpperCase() !== num.trim().toUpperCase()),
+    );
+  };
+
+  const asignarBodega = () => {
+    if (!bodegaPorAsignar) return;
+    const item = bodegasInventario.find(
+      (b) => b.numero.trim().toUpperCase() === bodegaPorAsignar.trim().toUpperCase(),
+    );
+    if (item) {
+      if (!bodegasAsignadasUnidad.some((b) => b.numero.trim().toUpperCase() === item.numero.trim().toUpperCase())) {
+        setBodegasAsignadasUnidad([
+          ...bodegasAsignadasUnidad,
+          {
+            numero: item.numero.trim(),
+            ubicacion: item.ubicacion,
+            metrosCuadrados: item.metrosCuadrados,
+          },
+        ]);
+      }
+    }
+    setBodegaPorAsignar('');
+  };
+
+  // Parqueaderos libres para asignar
+  const parqueaderosDisponiblesParaAsignar = useMemo(() => {
+    const yaAsignados = new Set(parqueaderosAsignadosUnidad.map((p) => p.numero.trim().toUpperCase()));
+    return parqueaderosInventario.filter((p) => {
+      if (!p.numero || yaAsignados.has(p.numero.trim().toUpperCase())) return false;
+      return !p.aptoAsignado || p.aptoAsignado.trim() === '';
+    });
+  }, [parqueaderosInventario, parqueaderosAsignadosUnidad]);
+
+  // Bodegas libres para asignar
+  const bodegasDisponiblesParaAsignar = useMemo(() => {
+    const yaAsignadas = new Set(bodegasAsignadasUnidad.map((b) => b.numero.trim().toUpperCase()));
+    return bodegasInventario.filter((b) => {
+      if (!b.numero || yaAsignadas.has(b.numero.trim().toUpperCase())) return false;
+      return !b.aptoAsignado || b.aptoAsignado.trim() === '';
+    });
+  }, [bodegasInventario, bodegasAsignadasUnidad]);
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +446,8 @@ export default function EditarCensoPage() {
           numeroApto: numeroApto.trim() || undefined,
           tipoOcupacion,
           notasAdministracion: notasAdministracion.trim() || undefined,
+          parqueaderosAsignados: parqueaderosAsignadosUnidad,
+          bodegasAsignadas: bodegasAsignadasUnidad,
           personas: personasValidas,
           mascotas: mascotas.filter((m) => m.nombre.trim() && m.raza.trim()),
           vehiculos: vehsValidos.map((v) => ({ ...v, placa: v.placa.trim().toUpperCase() })),
@@ -408,12 +532,171 @@ export default function EditarCensoPage() {
           </div>
         </div>
 
-        {/* 2. Residentes */}
+        {/* 2. Asignación de Parqueaderos y Bodegas */}
+        <div className="card card-border bg-base-100 shadow-xs p-5 space-y-4">
+          <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <span className="icon-[tabler--parking] text-primary" />
+              2. Asignación de Parqueaderos y Bodegas
+            </h2>
+            <span className="text-2xs text-base-content/60">
+              Sincronizado automáticamente con el inventario del edificio
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Parqueaderos */}
+            <div className="p-4 rounded-lg bg-base-200/40 border border-base-content/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-base-content flex items-center gap-1.5">
+                  <span className="icon-[tabler--car] text-primary" />
+                  Parqueaderos Asignados ({parqueaderosAsignadosUnidad.length})
+                </span>
+              </div>
+
+              {/* Lista actual */}
+              <div className="space-y-1.5 min-h-[50px]">
+                {parqueaderosAsignadosUnidad.length === 0 ? (
+                  <p className="text-2xs text-base-content/50 italic py-2">
+                    Sin parqueaderos asignados a este inmueble.
+                  </p>
+                ) : (
+                  parqueaderosAsignadosUnidad.map((p) => (
+                    <div
+                      key={p.numero}
+                      className="flex items-center justify-between p-2 rounded bg-base-100 border border-base-content/10 text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-primary">{p.numero}</span>
+                        <span className="badge badge-2xs badge-soft badge-ghost capitalize">
+                          {p.tipo || 'Carro'}
+                        </span>
+                        <span className="badge badge-2xs badge-soft badge-ghost">
+                          {p.esCubierto ? 'Cubierto' : 'Descubierto'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => quitarParqueadero(p.numero)}
+                        title="Desasignar parqueadero"
+                        className="btn btn-ghost btn-xs text-error gap-1 hover:bg-error/10"
+                      >
+                        <span className="icon-[tabler--trash] text-xs" />
+                        <span className="text-3xs font-semibold">Quitar</span>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Selector para asignar nuevo parqueadero disponible */}
+              <div className="pt-2 border-t border-base-content/10 flex items-center gap-2">
+                <select
+                  value={parqueaderoPorAsignar}
+                  onChange={(e) => setParqueaderoPorAsignar(e.target.value)}
+                  className="select select-xs w-full text-xs font-medium"
+                >
+                  <option value="">-- Seleccionar parqueadero disponible ({parqueaderosDisponiblesParaAsignar.length}) --</option>
+                  {parqueaderosDisponiblesParaAsignar.map((p) => (
+                    <option key={p.numero} value={p.numero}>
+                      {p.numero} · {p.tipo || 'Carro'} · {p.esCubierto ? 'Cubierto' : 'Descubierto'}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!parqueaderoPorAsignar}
+                  onClick={asignarParqueadero}
+                  className="btn btn-xs btn-primary shrink-0 gap-1 font-semibold"
+                >
+                  <span className="icon-[tabler--plus] text-xs" />
+                  <span>Asignar</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Bodegas */}
+            <div className="p-4 rounded-lg bg-base-200/40 border border-base-content/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-base-content flex items-center gap-1.5">
+                  <span className="icon-[tabler--archive] text-primary" />
+                  Bodegas de Depósito Asignadas ({bodegasAsignadasUnidad.length})
+                </span>
+              </div>
+
+              {/* Lista actual */}
+              <div className="space-y-1.5 min-h-[50px]">
+                {bodegasAsignadasUnidad.length === 0 ? (
+                  <p className="text-2xs text-base-content/50 italic py-2">
+                    Sin bodegas asignadas a este inmueble.
+                  </p>
+                ) : (
+                  bodegasAsignadasUnidad.map((b) => (
+                    <div
+                      key={b.numero}
+                      className="flex items-center justify-between p-2 rounded bg-base-100 border border-base-content/10 text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-primary">{b.numero}</span>
+                        {b.ubicacion && (
+                          <span className="text-3xs text-base-content/70 truncate max-w-[120px]">
+                            {b.ubicacion}
+                          </span>
+                        )}
+                        {b.metrosCuadrados && (
+                          <span className="badge badge-2xs badge-soft badge-ghost">
+                            {b.metrosCuadrados} m²
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => quitarBodega(b.numero)}
+                        title="Desasignar bodega"
+                        className="btn btn-ghost btn-xs text-error gap-1 hover:bg-error/10"
+                      >
+                        <span className="icon-[tabler--trash] text-xs" />
+                        <span className="text-3xs font-semibold">Quitar</span>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Selector para asignar nueva bodega disponible */}
+              <div className="pt-2 border-t border-base-content/10 flex items-center gap-2">
+                <select
+                  value={bodegaPorAsignar}
+                  onChange={(e) => setBodegaPorAsignar(e.target.value)}
+                  className="select select-xs w-full text-xs font-medium"
+                >
+                  <option value="">-- Seleccionar bodega disponible ({bodegasDisponiblesParaAsignar.length}) --</option>
+                  {bodegasDisponiblesParaAsignar.map((b) => (
+                    <option key={b.numero} value={b.numero}>
+                      {b.numero} {b.ubicacion ? `· ${b.ubicacion}` : ''} {b.metrosCuadrados ? `(${b.metrosCuadrados} m²)` : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!bodegaPorAsignar}
+                  onClick={asignarBodega}
+                  className="btn btn-xs btn-primary shrink-0 gap-1 font-semibold"
+                >
+                  <span className="icon-[tabler--plus] text-xs" />
+                  <span>Asignar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Residentes */}
         <div className="card card-border bg-base-100 shadow-xs p-5 space-y-4">
           <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <span className="icon-[tabler--users] text-primary" />
-              2. Residentes del Hogar ({personas.length})
+              3. Residentes del Hogar ({personas.length})
             </h2>
             <button
               type="button"
@@ -549,12 +832,12 @@ export default function EditarCensoPage() {
           </div>
         </div>
 
-        {/* 3. Mascotas */}
+        {/* 4. Mascotas */}
         <div className="card card-border bg-base-100 shadow-xs p-5 space-y-4">
           <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <span className="icon-[tabler--paw] text-secondary" />
-              3. Mascotas ({mascotas.length})
+              4. Mascotas ({mascotas.length})
             </h2>
             <button
               type="button"
@@ -638,12 +921,12 @@ export default function EditarCensoPage() {
           </div>
         </div>
 
-        {/* 4. Vehículos */}
+        {/* 5. Vehículos */}
         <div className="card card-border bg-base-100 shadow-xs p-5 space-y-4">
           <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <span className="icon-[tabler--car] text-success" />
-              4. Vehículos ({vehiculos.length})
+              5. Vehículos ({vehiculos.length})
             </h2>
             <button
               type="button"
@@ -712,8 +995,8 @@ export default function EditarCensoPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 items-center">
-                  <label className="flex items-center gap-1.5 text-2xs cursor-pointer">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 items-start">
+                  <label className="flex items-center gap-1.5 text-2xs cursor-pointer pt-1">
                     <input
                       type="checkbox"
                       checked={v.parqueaEnEdificio}
@@ -724,12 +1007,17 @@ export default function EditarCensoPage() {
                   </label>
 
                   {v.parqueaEnEdificio && (
-                    <input
-                      type="text"
+                    <SelectorParqueadero
                       value={v.numeroParqueadero}
-                      onChange={(e) => actualizarVehiculo(index, 'numeroParqueadero', e.target.value)}
-                      placeholder="N° parqueadero asignado"
-                      className="input input-xs w-full"
+                      onChange={(val) => actualizarVehiculo(index, 'numeroParqueadero', val)}
+                      tipoVehiculo={v.tipo}
+                      parqueaderosInventario={parqueaderosInventario}
+                      parqueaderosAsignadosUnidad={parqueaderosAsignadosUnidad}
+                      torreUnidad={torre}
+                      aptoUnidad={numeroApto}
+                      vehiculosEnFormulario={vehiculos}
+                      vehiculoIndex={index}
+                      size="xs"
                     />
                   )}
                 </div>
@@ -738,9 +1026,9 @@ export default function EditarCensoPage() {
           </div>
         </div>
 
-        {/* 5. Notas */}
+        {/* 6. Notas */}
         <div className="card card-border bg-base-100 shadow-xs p-5 space-y-2">
-          <label className="label label-text text-xs font-semibold">Notas Internas de Administración</label>
+          <label className="label label-text text-xs font-semibold">6. Notas Internas de Administración</label>
           <textarea
             value={notasAdministracion}
             onChange={(e) => setNotasAdministracion(e.target.value)}

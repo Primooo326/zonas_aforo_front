@@ -8,6 +8,7 @@ import {
   validarTelefono,
   validarPlaca,
 } from '@/lib/censo-helpers';
+import SelectorParqueadero, { ParqueaderoOpcion } from '@/components/censo/SelectorParqueadero';
 
 interface PersonaForm {
   nombreCompleto: string;
@@ -106,6 +107,9 @@ export default function InvitacionCensoTokenPage({
   const [tieneVehiculos, setTieneVehiculos] = useState(false);
   const [vehiculos, setVehiculos] = useState<VehiculoForm[]>([]);
 
+  // Parqueaderos disponibles
+  const [parqueaderosInventario, setParqueaderosInventario] = useState<ParqueaderoOpcion[]>([]);
+
   useEffect(() => {
     if (!token) return;
     apiFetch(`/censo/public/invitacion/${token}`)
@@ -127,6 +131,11 @@ export default function InvitacionCensoTokenPage({
           apiFetch(`/censo/public/${edifId}/unidades`)
             .then((data) => {
               if (Array.isArray(data)) setCatalogo(data);
+            })
+            .catch(() => {});
+          apiFetch(`/censo/public/${edifId}/parqueaderos`)
+            .then((data) => {
+              if (Array.isArray(data)) setParqueaderosInventario(data);
             })
             .catch(() => {});
         }
@@ -270,7 +279,35 @@ export default function InvitacionCensoTokenPage({
     valor: string | boolean,
   ) => {
     setVehiculos((prev) =>
-      prev.map((v, i) => (i === index ? { ...v, [campo]: valor } : v)),
+      prev.map((v, i) => {
+        if (i !== index) return v;
+        const actualizado = { ...v, [campo]: valor };
+        if (campo === 'parqueaEnEdificio') {
+          if (valor === true) {
+            if (!actualizado.numeroParqueadero) {
+              const usados = new Set(
+                prev
+                  .filter((veh, idx) => idx !== index && veh.parqueaEnEdificio && veh.numeroParqueadero)
+                  .map((veh) => veh.numeroParqueadero.trim().toUpperCase()),
+              );
+              const matchApto = parqueaderosInventario.find(
+                (p) =>
+                  p.numero &&
+                  !usados.has(p.numero.trim().toUpperCase()) &&
+                  numeroApto &&
+                  p.aptoAsignado &&
+                  p.aptoAsignado.toLowerCase() === numeroApto.toLowerCase(),
+              );
+              if (matchApto) {
+                actualizado.numeroParqueadero = matchApto.numero.trim();
+              }
+            }
+          } else {
+            actualizado.numeroParqueadero = '';
+          }
+        }
+        return actualizado;
+      }),
     );
   };
 
@@ -858,6 +895,34 @@ export default function InvitacionCensoTokenPage({
                     </div>
 
                     <div className="pt-2 border-t border-base-300 space-y-2 text-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={v.parqueaEnEdificio}
+                            onChange={(e) => actualizarVehiculo(idx, 'parqueaEnEdificio', e.target.checked)}
+                            className="checkbox w-5 h-5 rounded-md checkbox-primary"
+                          />
+                          <span>¿Parquea en el conjunto/edificio?</span>
+                        </label>
+
+                        {v.parqueaEnEdificio && (
+                          <div className="w-full sm:w-64">
+                            <SelectorParqueadero
+                              value={v.numeroParqueadero}
+                              onChange={(val) => actualizarVehiculo(idx, 'numeroParqueadero', val)}
+                              tipoVehiculo={v.tipo}
+                              parqueaderosInventario={parqueaderosInventario}
+                              torreUnidad={torre}
+                              aptoUnidad={numeroApto}
+                              vehiculosEnFormulario={vehiculos}
+                              vehiculoIndex={idx}
+                              size="sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input
                           type="checkbox"

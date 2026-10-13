@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
@@ -13,6 +13,7 @@ import {
   validarTelefono,
   validarPlaca,
 } from '@/lib/censo-helpers';
+import SelectorParqueadero, { ParqueaderoOpcion } from '@/components/censo/SelectorParqueadero';
 
 interface PersonaForm {
   nombreCompleto: string;
@@ -73,6 +74,15 @@ export default function NuevoCensoPage() {
 
   // Vehículos
   const [vehiculos, setVehiculos] = useState<VehiculoForm[]>([]);
+
+  // Parqueaderos disponibles
+  const [parqueaderosInventario, setParqueaderosInventario] = useState<ParqueaderoOpcion[]>([]);
+
+  useEffect(() => {
+    apiFetch('/censo/parqueaderos')
+      .then((data) => setParqueaderosInventario(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   // Helpers para modificar personas
   const agregarPersona = () => {
@@ -194,6 +204,33 @@ export default function NuevoCensoPage() {
   const actualizarVehiculo = (index: number, campo: keyof VehiculoForm, valor: string | boolean) => {
     const copia = [...vehiculos];
     copia[index] = { ...copia[index], [campo]: valor };
+
+    if (campo === 'parqueaEnEdificio') {
+      if (valor === true) {
+        if (!copia[index].numeroParqueadero) {
+          const usados = new Set(
+            copia
+              .filter((veh, idx) => idx !== index && veh.parqueaEnEdificio && veh.numeroParqueadero)
+              .map((veh) => veh.numeroParqueadero.trim().toUpperCase()),
+          );
+          // Buscar parqueadero asignado a esta torre y apto que esté libre
+          const matchApto = parqueaderosInventario.find(
+            (p) =>
+              p.numero &&
+              !usados.has(p.numero.trim().toUpperCase()) &&
+              numeroApto &&
+              p.aptoAsignado &&
+              p.aptoAsignado.toLowerCase() === numeroApto.toLowerCase(),
+          );
+          if (matchApto) {
+            copia[index].numeroParqueadero = matchApto.numero.trim();
+          }
+        }
+      } else {
+        copia[index].numeroParqueadero = '';
+      }
+    }
+
     setVehiculos(copia);
   };
 
@@ -690,8 +727,8 @@ export default function NuevoCensoPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 items-center">
-                    <label className="flex items-center gap-1.5 text-2xs cursor-pointer">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 items-start">
+                    <label className="flex items-center gap-1.5 text-2xs cursor-pointer pt-1">
                       <input
                         type="checkbox"
                         checked={v.parqueaEnEdificio}
@@ -702,12 +739,17 @@ export default function NuevoCensoPage() {
                     </label>
 
                     {v.parqueaEnEdificio && (
-                      <input
-                        type="text"
+                      <SelectorParqueadero
                         value={v.numeroParqueadero}
-                        onChange={(e) => actualizarVehiculo(index, 'numeroParqueadero', e.target.value)}
-                        placeholder="N° de parqueadero asignado"
-                        className="input input-xs w-full"
+                        onChange={(val) => actualizarVehiculo(index, 'numeroParqueadero', val)}
+                        tipoVehiculo={v.tipo}
+                        parqueaderosInventario={parqueaderosInventario}
+                        parqueaderosAsignadosUnidad={[]}
+                        torreUnidad={torre}
+                        aptoUnidad={numeroApto}
+                        vehiculosEnFormulario={vehiculos}
+                        vehiculoIndex={index}
+                        size="xs"
                       />
                     )}
                   </div>

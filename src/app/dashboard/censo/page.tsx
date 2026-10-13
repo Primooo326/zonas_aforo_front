@@ -902,11 +902,11 @@ export default function CensoDashboardPage() {
             <span className="truncate">Exportar Excel <span className="hidden sm:inline">(.xlsx)</span></span>
           </button>
           <Link
-            href="/dashboard/censo/nuevo"
+            href="/dashboard/censo/habitantes/nuevo"
             className="btn btn-sm btn-primary col-span-2 lg:col-span-1 w-full lg:w-auto gap-1.5 px-3 text-xs sm:text-sm font-medium justify-center"
           >
-            <span className="icon-[tabler--plus] text-base shrink-0" aria-hidden="true" />
-            <span>Nueva Unidad</span>
+            <span className="icon-[tabler--user-plus] text-base shrink-0" aria-hidden="true" />
+            <span>Nuevo Habitante</span>
           </Link>
         </div>
       </div>

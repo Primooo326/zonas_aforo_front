@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/lib/censo-helpers.test.ts",
     "clean": "powershell -Command \"Remove-Item -Recurse -Force '.next' -ErrorAction SilentlyContinue\""
   },
   "dependencies": {
