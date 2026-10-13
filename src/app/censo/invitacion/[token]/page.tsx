@@ -194,7 +194,11 @@ export default function InvitacionCensoTokenPage({
     setPersonas(personas.filter((_, i) => i !== index));
   };
 
-  const actualizarPersona = (index: number, campo: keyof PersonaForm, valor: any) => {
+  const actualizarPersona = (
+    index: number,
+    campo: keyof PersonaForm,
+    valor: string | boolean,
+  ) => {
     setPersonas((prev) =>
       prev.map((p, i) => {
         if (i !== index) {
@@ -229,7 +233,11 @@ export default function InvitacionCensoTokenPage({
     setMascotas(mascotas.filter((_, i) => i !== index));
   };
 
-  const actualizarMascota = (index: number, campo: keyof MascotaForm, valor: any) => {
+  const actualizarMascota = (
+    index: number,
+    campo: keyof MascotaForm,
+    valor: string | boolean,
+  ) => {
     setMascotas((prev) =>
       prev.map((m, i) => (i === index ? { ...m, [campo]: valor } : m)),
     );
@@ -256,7 +264,11 @@ export default function InvitacionCensoTokenPage({
     setVehiculos(vehiculos.filter((_, i) => i !== index));
   };
 
-  const actualizarVehiculo = (index: number, campo: keyof VehiculoForm, valor: any) => {
+  const actualizarVehiculo = (
+    index: number,
+    campo: keyof VehiculoForm,
+    valor: string | boolean,
+  ) => {
     setVehiculos((prev) =>
       prev.map((v, i) => (i === index ? { ...v, [campo]: valor } : v)),
     );
@@ -628,7 +640,7 @@ export default function InvitacionCensoTokenPage({
                         type="checkbox"
                         checked={p.discapacidad}
                         onChange={(e) => actualizarPersona(idx, 'discapacidad', e.target.checked)}
-                        className="checkbox checkbox-xs checkbox-primary"
+                        className="checkbox w-5 h-5 rounded-md checkbox-primary"
                       />
                       <span>Presenta alguna discapacidad</span>
                     </label>
@@ -638,7 +650,7 @@ export default function InvitacionCensoTokenPage({
                       value={p.condicionEspecial}
                       onChange={(e) => actualizarPersona(idx, 'condicionEspecial', e.target.value)}
                       placeholder="Condición especial (ej: movilidad reducida, etc.)"
-                      className="input input-bordered input-xs text-2xs"
+                      className="input input-bordered input-sm font-medium"
                     />
 
                     <div className="sm:col-span-2">
@@ -647,7 +659,7 @@ export default function InvitacionCensoTokenPage({
                         value={p.adjuntoCedulaUrl}
                         onChange={(e) => actualizarPersona(idx, 'adjuntoCedulaUrl', e.target.value)}
                         placeholder="Enlace o adjunto de documento de identidad (opcional)"
-                        className="input input-bordered input-xs text-2xs w-full"
+                        className="input input-bordered input-sm font-medium w-full"
                       />
                     </div>
                   </div>
@@ -728,7 +740,7 @@ export default function InvitacionCensoTokenPage({
                             type="checkbox"
                             checked={m.esManejoEspecial}
                             onChange={(e) => actualizarMascota(idx, 'esManejoEspecial', e.target.checked)}
-                            className="checkbox checkbox-xs checkbox-warning"
+                            className="checkbox w-5 h-5 rounded-md checkbox-warning"
                           />
                           <span className="text-warning font-semibold">Raza de Manejo Especial (potencialmente agresivo)</span>
                         </label>
@@ -737,7 +749,7 @@ export default function InvitacionCensoTokenPage({
                             type="checkbox"
                             checked={m.vacunasAlDia}
                             onChange={(e) => actualizarMascota(idx, 'vacunasAlDia', e.target.checked)}
-                            className="checkbox checkbox-xs checkbox-success"
+                            className="checkbox w-5 h-5 rounded-md checkbox-success"
                           />
                           <span>Vacunas al día</span>
                         </label>
@@ -749,7 +761,7 @@ export default function InvitacionCensoTokenPage({
                           value={m.adjuntoCarnetVacunacionUrl}
                           onChange={(e) => actualizarMascota(idx, 'adjuntoCarnetVacunacionUrl', e.target.value)}
                           placeholder="Adjunto Carnet de Vacunación (URL o ref)"
-                          className="input input-bordered input-xs text-2xs"
+                          className="input input-bordered input-sm font-medium"
                         />
                         <input
                           type="text"
@@ -757,7 +769,7 @@ export default function InvitacionCensoTokenPage({
                           onChange={(e) => actualizarMascota(idx, 'adjuntoPolizaUrl', e.target.value)}
                           placeholder={m.esManejoEspecial ? "Póliza de Responsabilidad Civil (OBLIGATORIA) *" : "Póliza de Responsabilidad Civil (opcional)"}
                           required={m.esManejoEspecial}
-                          className={`input input-bordered input-xs text-2xs ${m.esManejoEspecial ? 'border-warning' : ''}`}
+                          className={`input input-bordered input-sm font-medium ${m.esManejoEspecial ? 'border-warning' : ''}`}
                         />
                       </div>
                     </div>
@@ -851,7 +863,7 @@ export default function InvitacionCensoTokenPage({
                           type="checkbox"
                           checked={v.esPropietarioResidente}
                           onChange={(e) => actualizarVehiculo(idx, 'esPropietarioResidente', e.target.checked)}
-                          className="checkbox checkbox-xs checkbox-primary"
+                          className="checkbox w-5 h-5 rounded-md checkbox-primary"
                         />
                         <span>Vehículo a nombre del residente / propietario que habita en esta vivienda</span>
                       </label>
@@ -861,7 +873,7 @@ export default function InvitacionCensoTokenPage({
                         value={v.adjuntoTarjetaPropiedadUrl}
                         onChange={(e) => actualizarVehiculo(idx, 'adjuntoTarjetaPropiedadUrl', e.target.value)}
                         placeholder="Adjunto Tarjeta de Propiedad (URL o ref)"
-                        className="input input-bordered input-xs text-2xs w-full"
+                        className="input input-bordered input-sm font-medium w-full"
                       />
                     </div>
                   </div>

@@ -47,9 +47,17 @@ export default function InvitacionPage({ params }: { params: Promise<{ buildingI
   return (
     <div className="min-h-screen bg-base-200">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">{building.nombre}</h1>
-          <p className="text-base-content/60">Formulario de Solicitud de Reserva</p>
+        <div className="text-center mb-6 space-y-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-bold text-sm">
+            <span className="icon-[tabler--building-community] text-lg" />
+            <span>{building.nombre}</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-base-content">
+            Portal de Reservas de Zonas Comunes
+          </h1>
+          <p className="text-sm sm:text-base text-base-content/85 font-medium max-w-lg mx-auto">
+            Diligencia el formulario a continuación para solicitar tu turno en las áreas sociales del edificio.
+          </p>
         </div>
 
         <div className="flex justify-center">

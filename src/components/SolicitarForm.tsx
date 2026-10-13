@@ -69,7 +69,12 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   const [cargandoCenso, setCargandoCenso] = useState(true);
   const [torreSel, setTorreSel] = useState('');
   const [unidadSelId, setUnidadSelId] = useState('');
-  const [telefonoContacto, setTelefonoContacto] = useState('');
+  const [telefonoContacto, setTelefonoContacto] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEYS.telefono) || '';
+    }
+    return '';
+  });
 
   const [zonaId, setZonaId] = useState('');
   const [form, setForm] = useState(() => {
@@ -101,12 +106,6 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   const diaSel = form.fecha ? diaDeFecha(form.fecha) : '';
   const horarioSel = zonaSel?.horarios?.find((h) => h.dia === diaSel) ?? null;
   const diaSinHorario = !!zonaSel && !!form.fecha && !horarioSel;
-
-  useEffect(() => {
-    if (form.telefonoContacto) {
-      setTelefonoContacto(form.telefonoContacto);
-    }
-  }, [form.telefonoContacto]);
 
   useEffect(() => {
     let active = true;
@@ -234,7 +233,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
     setSaving(true);
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         zonaId,
         fecha: form.fecha,
         horaInicio: form.horaInicio,
@@ -264,7 +263,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
       }
 
       localStorage.setItem(STORAGE_KEYS.nombre, form.nombreSolicitante);
-      localStorage.setItem(STORAGE_KEYS.torre, payload.torreInmueble || '');
+      localStorage.setItem(STORAGE_KEYS.torre, String(payload.torreInmueble || ''));
       localStorage.setItem(STORAGE_KEYS.tipo, form.tipo);
       if (telefonoContacto) localStorage.setItem(STORAGE_KEYS.telefono, telefonoContacto);
 
@@ -320,21 +319,24 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
   return (
     <div className="card bg-base-100 shadow-sm p-6 sm:p-8 max-w-lg w-full">
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Reservar Zona Común</h1>
-        <p className="text-xs sm:text-sm text-base-content/60">
-          Elige la zona, fecha y horario de tu reserva
+      <div className="mb-6 space-y-1">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-base-content flex items-center gap-2.5">
+          <span className="icon-[tabler--calendar-plus] text-primary text-2xl shrink-0" />
+          <span>Reservar Zona Común</span>
+        </h1>
+        <p className="text-sm sm:text-base text-base-content/85 font-medium">
+          Elige la zona común, fecha y horario deseado para tu reserva
         </p>
       </div>
 
-      {error && <div className="alert alert-error mb-4 text-sm">{error}</div>}
+      {error && <div className="alert alert-error mb-4 text-sm font-semibold">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Zona */}
         <label className="form-control">
-          <span className="label-text">Zona común</span>
+          <span className="label-text font-bold text-sm sm:text-base text-base-content">Zona común *</span>
           <select
-            className="select select-bordered"
+            className="select select-bordered mt-1 font-medium"
             required
             value={zonaId}
             onChange={(e) => {
@@ -354,13 +356,13 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         </label>
 
         {zonaSel?.enMantenimiento && (
-          <div className="alert alert-warning text-xs sm:text-sm">
-            <span className="icon-[tabler--alert-triangle] text-lg shrink-0" />
+          <div className="alert alert-warning text-sm">
+            <span className="icon-[tabler--alert-triangle] text-xl shrink-0" />
             <div>
               <p className="font-bold">
                 {zonaSel.mantenimientoFechaInicio ? 'Mantenimiento Programado' : 'Zona en Mantenimiento'}
               </p>
-              <p>
+              <p className="font-medium">
                 {zonaSel.mantenimientoFechaInicio ? (
                   <span>
                     Programado del <strong>{zonaSel.mantenimientoFechaInicio} {zonaSel.mantenimientoHoraInicio || ''}</strong> al <strong>{zonaSel.mantenimientoFechaFin || ''} {zonaSel.mantenimientoHoraFin || ''}</strong>. Motivo: {zonaSel.motivoMantenimiento || 'Mantenimiento de instalaciones'}.
@@ -376,29 +378,31 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         )}
 
         {zonaSel?.politicasUso && (
-          <div className="bg-primary/5 border border-primary/20 rounded-box p-3 text-xs space-y-1">
-            <span className="font-semibold text-primary flex items-center gap-1">
-              <span className="icon-[tabler--shield-check] text-sm" />
-              Políticas de Uso de la Zona:
+          <div className="callout-indicativo space-y-1.5">
+            <span className="font-bold text-primary flex items-center gap-2 text-sm sm:text-base">
+              <span className="icon-[tabler--shield-check] text-lg shrink-0" />
+              Reglamento y Políticas de Uso:
             </span>
-            <p className="text-base-content/80 whitespace-pre-line">{zonaSel.politicasUso}</p>
+            <p className="text-base-content font-medium whitespace-pre-line text-sm leading-relaxed">
+              {zonaSel.politicasUso}
+            </p>
           </div>
         )}
 
         {/* MODO CENSO (Selectores de Torre e Inmueble) vs MODO LEGACY */}
         {!cargandoCenso && unidadesCenso.length > 0 ? (
-          <div className="bg-primary/5 border border-primary/20 rounded-box p-3.5 space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <span className="icon-[tabler--database] text-sm" />
+          <div className="p-4 rounded-box bg-base-200/40 border border-base-200 space-y-3">
+            <div className="flex items-center gap-2 text-sm sm:text-base font-bold text-primary">
+              <span className="icon-[tabler--building-community] text-lg shrink-0" />
               <span>Inmueble Registrado en el Censo</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {tieneTorres && (
                 <label className="form-control">
-                  <span className="label-text text-xs">Torre *</span>
+                  <span className="label-text font-bold text-xs sm:text-sm text-base-content">Torre *</span>
                   <select
-                    className="select select-bordered select-sm w-full"
+                    className="select select-bordered select-sm w-full mt-1"
                     value={torreSel}
                     onChange={(e) => {
                       setTorreSel(e.target.value);
@@ -417,9 +421,9 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
               )}
 
               <label className="form-control">
-                <span className="label-text text-xs">Apartamento / Inmueble *</span>
+                <span className="label-text font-bold text-xs sm:text-sm text-base-content">Apartamento / Inmueble *</span>
                 <select
-                  className="select select-bordered select-sm w-full"
+                  className="select select-bordered select-sm w-full mt-1"
                   value={unidadSelId}
                   onChange={(e) => setUnidadSelId(e.target.value)}
                   disabled={tieneTorres && !torreSel}
@@ -439,10 +443,10 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
           /* MODO LEGACY (Campos abiertos) */
           <>
             <label className="form-control">
-              <span className="label-text">Torre / Inmueble</span>
+              <span className="label-text font-bold text-sm sm:text-base text-base-content">Torre / Inmueble</span>
               <input
                 type="text"
-                className="input input-bordered"
+                className="input input-bordered mt-1 font-medium"
                 required
                 placeholder="Ej: Torre 1 - 201"
                 value={form.torreInmueble}
@@ -451,9 +455,9 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
             </label>
 
             <label className="form-control">
-              <span className="label-text">Condición</span>
+              <span className="label-text font-bold text-sm sm:text-base text-base-content">Condición</span>
               <select
-                className="select select-bordered"
+                className="select select-bordered mt-1 font-medium"
                 value={form.tipo}
                 onChange={(e) => setForm({ ...form, tipo: e.target.value })}
               >
@@ -466,10 +470,10 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
         {/* Datos del Solicitante */}
         <label className="form-control">
-          <span className="label-text">Nombre del Solicitante *</span>
+          <span className="label-text font-bold text-sm sm:text-base text-base-content">Nombre del Solicitante *</span>
           <input
             type="text"
-            className="input input-bordered"
+            className="input input-bordered mt-1 font-medium"
             required
             placeholder="Nombre completo"
             value={form.nombreSolicitante}
@@ -478,35 +482,35 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         </label>
 
         <label className="form-control">
-          <div className="flex justify-between items-center">
-            <span className="label-text">Edad del Solicitante * (Mayor de edad)</span>
-            <span className="text-xs text-base-content/50">Regla de Aforo</span>
+          <div className="flex justify-between items-center mb-1">
+            <span className="label-text font-bold text-sm sm:text-base text-base-content">Edad del Solicitante * (Mayor de edad)</span>
+            <span className="badge badge-sm badge-outline font-semibold">Regla de Aforo</span>
           </div>
           <input
             type="number"
             min="1"
             max="120"
-            className="input input-bordered"
+            className="input input-bordered font-semibold text-base"
             required
             placeholder="Ej: 28"
             value={form.edadSolicitante}
             onChange={(e) => setForm({ ...form, edadSolicitante: e.target.value })}
           />
-          <span className="label-text-alt text-base-content/60">
+          <span className="label-text-alt text-base-content/85 font-medium mt-1">
             Los menores de 18 años no están autorizados para apartar zonas comunes.
           </span>
         </label>
 
         <label className="form-control">
-          <span className="label-text">Teléfono de Contacto (opcional)</span>
+          <span className="label-text font-bold text-sm sm:text-base text-base-content">Teléfono de Contacto (opcional)</span>
           <input
             type="tel"
-            className="input input-bordered"
+            className="input input-bordered mt-1 font-medium"
             placeholder="Ej: 3001234567"
             value={telefonoContacto}
             onChange={(e) => setTelefonoContacto(e.target.value)}
           />
-          <span className="label-text-alt text-base-content/60">
+          <span className="label-text-alt text-base-content/85 font-medium mt-1">
             {unidadesCenso.length > 0
               ? 'Se utilizará para verificar automáticamente tu estado de propietario o residente en el censo'
               : 'Para notificaciones o confirmación de tu turno'}
@@ -515,10 +519,10 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
         {/* Fecha */}
         <label className="form-control">
-          <span className="label-text">Fecha</span>
+          <span className="label-text font-bold text-sm sm:text-base text-base-content">Fecha de la Reserva *</span>
           <input
             type="date"
-            className="input input-bordered"
+            className="input input-bordered mt-1 font-medium"
             required
             min={new Date().toISOString().split('T')[0]}
             value={form.fecha}
@@ -538,42 +542,45 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
 
         {/* Hora */}
         <label className="form-control">
-          <span className="label-text">Hora de inicio</span>
-          <TimePicker
-            value={form.horaInicio}
-            onChange={(v) => {
-              setForm({ ...form, horaInicio: v });
-              checkDisponibilidad(zonaSel, form.fecha, v);
-            }}
-            minTime={horarioSel?.inicio}
-            maxTime={horarioSel?.fin}
-          />
+          <span className="label-text font-bold text-sm sm:text-base text-base-content">Hora de inicio deseada *</span>
+          <div className="mt-1">
+            <TimePicker
+              value={form.horaInicio}
+              onChange={(v) => {
+                setForm({ ...form, horaInicio: v });
+                checkDisponibilidad(zonaSel, form.fecha, v);
+              }}
+              minTime={horarioSel?.inicio}
+              maxTime={horarioSel?.fin}
+            />
+          </div>
         </label>
 
         {zonaSel && form.horaInicio && (
-          <div className="text-sm space-y-1">
-            <p className="text-base-content/70">
-              Tu turno será de <strong>{form.horaInicio}</strong> a <strong>{horaFinCalc}</strong>
-              &nbsp;(lapso: {zonaSel.lapsoMinutos} min)
+          <div className="bg-base-200/60 border border-base-200 rounded-lg p-3.5 space-y-1">
+            <p className="text-sm sm:text-base text-base-content font-bold">
+              Horario asignado para tu turno: <span className="text-primary">{form.horaInicio}</span> a <span className="text-primary">{horaFinCalc}</span>
             </p>
-            <p className="text-base-content/50 italic text-xs">No es obligatorio usar todo el tiempo.</p>
+            <p className="text-xs sm:text-sm text-base-content/85 font-medium">
+              Duración máxima de este turno: <strong>{zonaSel.lapsoMinutos} minutos</strong>. No es obligatorio permanecer todo el tiempo.
+            </p>
           </div>
         )}
 
         {diaSinHorario && (
-          <div className="alert alert-error text-sm">
+          <div className="alert alert-error text-sm font-semibold">
             La zona no está disponible los {diaSel}. Elige otra fecha.
           </div>
         )}
 
         {checking && (
-          <div className="flex items-center gap-2 text-sm text-base-content/60">
-            <span className="loading loading-spinner loading-xs"></span> Verificando disponibilidad...
+          <div className="flex items-center gap-2 text-sm text-base-content font-semibold">
+            <span className="loading loading-spinner loading-xs text-primary"></span> Verificando disponibilidad...
           </div>
         )}
 
         {!checking && disponibilidad.disponible !== undefined && (
-          <div className={`alert ${disponibilidad.disponible ? 'alert-success' : 'alert-error'} text-sm`}>
+          <div className={`alert ${disponibilidad.disponible ? 'alert-success' : 'alert-error'} text-sm font-semibold`}>
             {disponibilidad.disponible
               ? `Disponible (${disponibilidad.disponibles} cupos libres)`
               : 'Aforo completo en esta franja horaria'}
@@ -583,9 +590,18 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         <button
           type="submit"
           disabled={saving || !zonaId || diaSinHorario || disponibilidad.disponible === false || enMantenimientoSlot}
-          className="btn btn-primary w-full mt-2"
+          className="btn btn-primary btn-sm w-full mt-3 text-base font-bold gap-2"
         >
-          {saving ? <span className="loading loading-spinner"></span> : enMantenimientoSlot ? 'Zona en mantenimiento' : 'Solicitar turno'}
+          {saving ? (
+            <span className="loading loading-spinner"></span>
+          ) : enMantenimientoSlot ? (
+            'Zona en mantenimiento'
+          ) : (
+            <>
+              <span className="icon-[tabler--calendar-check] text-xl" />
+              Solicitar Turno
+            </>
+          )}
         </button>
       </form>
     </div>

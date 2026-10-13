@@ -155,7 +155,7 @@ export default function EditInmueblePage() {
       {censoInfo && (
         <div className="bg-primary/5 border border-primary/20 rounded-box p-3 sm:p-4 flex items-center justify-between gap-3 text-xs sm:text-sm">
           <div className="flex items-center gap-2 text-primary font-medium">
-            <span className="icon-[tabler--database-check] text-lg" />
+            <span className="icon-[tabler--database] text-lg" />
             <span>
               Inmueble Vinculado: <strong>{censoInfo.identificador || `${censoInfo.torre ? censoInfo.torre + ' - ' : ''}Apto ${censoInfo.numeroApto}`}</strong>
               {censoInfo.itemAsignadoRef ? ` (${censoInfo.itemAsignadoRef})` : ''}

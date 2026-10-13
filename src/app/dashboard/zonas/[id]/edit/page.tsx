@@ -177,31 +177,35 @@ export default function EditZonaPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Editar Zona Común</h1>
-          <p className="text-sm text-base-content/60">
-            Actualiza los parámetros, aforos y políticas de la zona
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-base-content flex items-center gap-2">
+            <span className="icon-[tabler--calendar-event] text-primary text-2xl sm:text-3xl shrink-0" />
+            <span>Editar Zona Común{form.nombre ? `: ${form.nombre}` : ''}</span>
+          </h1>
+          <p className="text-sm sm:text-base text-base-content/85 font-medium mt-1">
+            Actualiza los parámetros de aforo, políticas de uso y horarios de operación
           </p>
         </div>
         <button
           type="button"
           onClick={() => router.back()}
-          className="btn btn-outline btn-sm gap-1"
+          className="btn btn-outline btn-sm gap-1.5 font-medium"
         >
-          ← Volver
+          <span className="icon-[tabler--arrow-left] text-base" />
+          <span>Volver a Zonas</span>
         </button>
       </div>
 
-      {error && <div className="alert alert-error text-sm">{error}</div>}
+      {error && <div className="alert alert-error text-sm font-semibold">{error}</div>}
 
       <form onSubmit={handleSubmit} className="card bg-base-100 shadow-sm border border-base-200 p-6 space-y-5">
         <label className="form-control">
-          <span className="label-text font-semibold">Nombre de la Zona *</span>
+          <span className="label-text font-bold text-sm sm:text-base text-base-content">Nombre de la Zona *</span>
           <input
             name="nombre"
             type="text"
-            className="input input-bordered"
+            className="input input-bordered mt-1"
             value={form.nombre}
             onChange={(e) => setForm({ ...form, nombre: e.target.value })}
             required
@@ -211,20 +215,25 @@ export default function EditZonaPage() {
         {/* Políticas de Uso */}
         <label className="form-control">
           <div className="flex justify-between items-center mb-1">
-            <span className="label-text font-semibold">Políticas de Uso y Normas de Convivencia</span>
-            <span className="text-xs text-base-content/50">Requerimiento</span>
+            <span className="label-text font-bold text-sm sm:text-base text-base-content">
+              Políticas de Uso y Normas de Convivencia
+            </span>
+            <span className="badge badge-sm badge-outline font-semibold">Requerimiento</span>
+          </div>
+          <div className="callout-indicativo mb-2 flex items-start gap-2">
+            <span className="icon-[tabler--info-circle] text-primary text-lg shrink-0 mt-0.5" />
+            <p className="text-sm font-medium">
+              <strong>Texto indicativo:</strong> Este reglamento será mostrado de forma obligatoria a los residentes antes de que puedan solicitar o confirmar un turno.
+            </p>
           </div>
           <textarea
             name="politicasUso"
             rows={3}
-            className="textarea textarea-bordered text-sm"
+            className="textarea textarea-bordered text-sm font-medium"
             placeholder="Reglas de convivencia, volumen de música permitido, aseo, restricciones de uso..."
             value={form.politicasUso}
             onChange={(e) => setForm({ ...form, politicasUso: e.target.value })}
           />
-          <span className="label-text-alt text-base-content/60 mt-1">
-            Se mostrarán directamente a los residentes antes de confirmar su turno.
-          </span>
         </label>
 
         <label className="form-control">
@@ -429,36 +438,48 @@ export default function EditZonaPage() {
           )}
         </div>
 
-        <div className="space-y-3 pt-2">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-            <div>
-              <span className="font-semibold text-sm">Horarios por día</span>
-              <p className="text-xs text-base-content/60">
-                Ajusta los días disponibles y sus horas de operación.
-              </p>
+        <div className="space-y-4 pt-4 border-t border-base-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="icon-[tabler--clock-hour-4] text-primary text-2xl shrink-0" />
+              <div>
+                <h3 className="font-bold text-base sm:text-lg text-base-content">Horarios de Operación por Día</h3>
+                <p className="text-sm text-base-content/80 font-medium">
+                  Define qué días abre esta zona y los rangos de horas disponibles
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => seleccionarTodosLosDias(true)}
-                className="btn btn-xs btn-outline"
+                className="btn btn-xs btn-outline gap-1 font-semibold"
               >
+                <span className="icon-[tabler--check] text-sm" />
                 Activar todos
               </button>
               <button
                 type="button"
                 onClick={() => seleccionarTodosLosDias(false)}
-                className="btn btn-xs btn-outline text-base-content/70 hover:bg-base-200"
+                className="btn btn-xs btn-outline gap-1 text-base-content/80 hover:bg-base-200 font-semibold"
               >
+                <span className="icon-[tabler--x] text-sm" />
                 Desmarcar todos
               </button>
             </div>
           </div>
 
+          <div className="callout-indicativo flex items-start gap-2">
+            <span className="icon-[tabler--info-circle] text-primary text-lg shrink-0 mt-0.5" />
+            <p className="text-sm font-medium">
+              <strong>Indicación para horarios:</strong> Marca la casilla del día para habilitarlo (aparecerá en verde como &quot;Abierto&quot;). Si un día no se encuentra activo, los residentes no podrán reservar turnos para esa fecha.
+            </p>
+          </div>
+
           <div className="divide-y divide-base-200 border border-base-200 rounded-box p-3 bg-base-200/30">
             {DIAS_OPTS.map((dia) => (
-              <div key={dia} className="py-2.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-sm font-medium w-28">{dia}</span>
+              <div key={dia} className="py-2.5 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-sm sm:text-base font-bold w-28 text-base-content">{dia}</span>
                 <div className="flex-1">
                   <RangoHoraPicker
                     dia={dia}
@@ -477,11 +498,16 @@ export default function EditZonaPage() {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4 border-t border-base-200">
-          <button type="submit" disabled={saving} className="btn btn-primary flex-1 sm:flex-initial">
-            {saving ? <span className="loading loading-spinner"></span> : 'Guardar Cambios'}
+        <div className="flex gap-3 pt-5 border-t border-base-200">
+          <button type="submit" disabled={saving} className="btn btn-primary btn-sm flex-1 sm:flex-initial gap-2 text-base font-bold">
+            {saving ? <span className="loading loading-spinner"></span> : (
+              <>
+                <span className="icon-[tabler--device-floppy] text-lg" />
+                Guardar Cambios
+              </>
+            )}
           </button>
-          <button type="button" onClick={() => router.back()} className="btn btn-outline">
+          <button type="button" onClick={() => router.back()} className="btn btn-outline btn-sm font-semibold">
             Cancelar
           </button>
         </div>

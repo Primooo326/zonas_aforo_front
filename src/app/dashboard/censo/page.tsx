@@ -13,6 +13,9 @@ import {
   Vehiculo,
 } from '@/lib/censo-helpers';
 import ModalCargaExcel from '@/components/censo/ModalCargaExcel';
+import Paginacion from '@/components/Paginacion';
+import BarraBusquedaFiltros from '@/components/BarraBusquedaFiltros';
+import BotoneraAccionesTabla from '@/components/BotoneraAccionesTabla';
 
 interface CensoStats {
   totalUnidades: number;
@@ -84,6 +87,19 @@ export default function CensoDashboardPage() {
   const [filtroMascotas, setFiltroMascotas] = useState('todos');
   const [filtroTag, setFiltroTag] = useState('todos');
   const [ordenInmuebles, setOrdenInmuebles] = useState('identificador_asc');
+  const [pageInmuebles, setPageInmuebles] = useState(1);
+  const [itemsPerPageInmuebles, setItemsPerPageInmuebles] = useState(10);
+  const [drawerFiltrosInmuebles, setDrawerFiltrosInmuebles] = useState(false);
+  const [vistaInmuebles, setVistaInmuebles] = useState<'tabla' | 'tarjetas'>('tabla');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vista_censo_inmuebles') as 'tabla' | 'tarjetas' | null;
+      if (saved === 'tabla' || saved === 'tarjetas') {
+        setVistaInmuebles(saved);
+      }
+    }
+  }, []);
 
   // Invitación con caducidad
   const [inviteToken, setInviteToken] = useState('');
@@ -97,6 +113,9 @@ export default function CensoDashboardPage() {
   const [filtroGrupoEtarioResidente, setFiltroGrupoEtarioResidente] = useState('todos');
   const [filtroContactoPrincipal, setFiltroContactoPrincipal] = useState('todos');
   const [ordenResidentes, setOrdenResidentes] = useState('nombre_asc');
+  const [pageResidentes, setPageResidentes] = useState(1);
+  const [itemsPerPageResidentes, setItemsPerPageResidentes] = useState(10);
+  const [drawerFiltrosResidentes, setDrawerFiltrosResidentes] = useState(false);
 
   // Filtros y Orden Parqueaderos
   const [searchParq, setSearchParq] = useState('');
@@ -105,12 +124,16 @@ export default function CensoDashboardPage() {
   const [filtroModoParq, setFiltroModoParq] = useState('todos');
   const [filtroAsignacionParq, setFiltroAsignacionParq] = useState('todos');
   const [ordenParq, setOrdenParq] = useState('numero_asc');
+  const [pageParq, setPageParq] = useState(1);
+  const [itemsPerPageParq, setItemsPerPageParq] = useState(10);
 
   // Filtros y Orden Bodegas
   const [searchBodega, setSearchBodega] = useState('');
   const [filtroTorreBodega, setFiltroTorreBodega] = useState('todos');
   const [filtroAsignacionBodega, setFiltroAsignacionBodega] = useState('todos');
   const [ordenBodegas, setOrdenBodegas] = useState('numero_asc');
+  const [pageBodegas, setPageBodegas] = useState(1);
+  const [itemsPerPageBodegas, setItemsPerPageBodegas] = useState(10);
 
   // Modal QR
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -467,10 +490,6 @@ export default function CensoDashboardPage() {
           return (a.piso ?? 0) - (b.piso ?? 0);
         case 'piso_desc':
           return (b.piso ?? 0) - (a.piso ?? 0);
-        case 'metros_desc':
-          return (b.metrosCuadrados ?? 0) - (a.metrosCuadrados ?? 0);
-        case 'metros_asc':
-          return (a.metrosCuadrados ?? 0) - (b.metrosCuadrados ?? 0);
         case 'personas_desc':
           return (b.personas?.length ?? 0) - (a.personas?.length ?? 0);
         case 'mascotas_desc':
@@ -495,6 +514,32 @@ export default function CensoDashboardPage() {
     filtroMascotas,
     filtroTag,
     ordenInmuebles,
+  ]);
+
+  // Paginación y conteo de filtros para Inmuebles
+  const unidadesPaginadas = useMemo(() => {
+    const start = (pageInmuebles - 1) * itemsPerPageInmuebles;
+    return unidadesFiltradas.slice(start, start + itemsPerPageInmuebles);
+  }, [unidadesFiltradas, pageInmuebles, itemsPerPageInmuebles]);
+
+  const totalFiltrosInmueblesActivos = useMemo(() => {
+    return [
+      filtroTorreInmuebles !== 'todos',
+      filtroOcupacionInmuebles !== 'todos',
+      filtroDemografia !== 'todos',
+      filtroTipoResidente !== 'todos',
+      filtroMascotas !== 'todos',
+      filtroTag !== 'todos',
+      filtroEstado !== 'todos',
+    ].filter(Boolean).length;
+  }, [
+    filtroTorreInmuebles,
+    filtroOcupacionInmuebles,
+    filtroDemografia,
+    filtroTipoResidente,
+    filtroMascotas,
+    filtroTag,
+    filtroEstado,
   ]);
 
   // Aplanamiento de Residentes
@@ -582,6 +627,26 @@ export default function CensoDashboardPage() {
     filtroGrupoEtarioResidente,
     filtroContactoPrincipal,
     ordenResidentes,
+  ]);
+
+  // Paginación y conteo de filtros para Residentes
+  const residentesPaginados = useMemo(() => {
+    const start = (pageResidentes - 1) * itemsPerPageResidentes;
+    return residentesFiltrados.slice(start, start + itemsPerPageResidentes);
+  }, [residentesFiltrados, pageResidentes, itemsPerPageResidentes]);
+
+  const totalFiltrosResidentesActivos = useMemo(() => {
+    return [
+      filtroTorreResidentes !== 'todos',
+      filtroCondicionResidente !== 'todos',
+      filtroGrupoEtarioResidente !== 'todos',
+      filtroContactoPrincipal !== 'todos',
+    ].filter(Boolean).length;
+  }, [
+    filtroTorreResidentes,
+    filtroCondicionResidente,
+    filtroGrupoEtarioResidente,
+    filtroContactoPrincipal,
   ]);
 
   // Métricas de Residentes
@@ -682,6 +747,12 @@ export default function CensoDashboardPage() {
     mapaVehiculosPorParq,
   ]);
 
+  // Paginación Parqueaderos
+  const parqueaderosPaginados = useMemo(() => {
+    const start = (pageParq - 1) * itemsPerPageParq;
+    return parqueaderosFiltrados.slice(start, start + itemsPerPageParq);
+  }, [parqueaderosFiltrados, pageParq, itemsPerPageParq]);
+
   // Filtrado y Ordenamiento de Bodegas
   const bodegasFiltradas = useMemo(() => {
     const filtradas = bodegas.filter((b) => {
@@ -750,6 +821,12 @@ export default function CensoDashboardPage() {
     ordenBodegas,
     mapaUnidadesPorBodega,
   ]);
+
+  // Paginación Bodegas
+  const bodegasPaginadas = useMemo(() => {
+    const start = (pageBodegas - 1) * itemsPerPageBodegas;
+    return bodegasFiltradas.slice(start, start + itemsPerPageBodegas);
+  }, [bodegasFiltradas, pageBodegas, itemsPerPageBodegas]);
 
   // Métricas de Parqueaderos
   const statsParq = useMemo(() => {
@@ -1000,149 +1077,188 @@ export default function CensoDashboardPage() {
             </div>
           </div>
 
-          {/* Barra de Búsqueda y Filtros Inmuebles */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4 space-y-3">
-            {/* Fila 1: Búsqueda y Ordenamiento */}
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1">
-                <span className="icon-[tabler--search] absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 text-base" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar por placa vehicular, apartamento, torre, nombre o teléfono..."
-                  className="input input-sm w-full pl-9 text-xs"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {torresDisponibles.length > 0 && (
-                  <select
-                    value={filtroTorreInmuebles}
-                    onChange={(e) => setFiltroTorreInmuebles(e.target.value)}
-                    className="select select-sm text-xs"
-                  >
-                    <option value="todos">Torre: Todas</option>
-                    {torresDisponibles.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                )}
-
+          {/* Barra de Búsqueda y Filtros Inmuebles Compartida (Fila única + Drawer + Toggle Vista) */}
+          <BarraBusquedaFiltros
+            busqueda={search}
+            onBusquedaChange={(val) => {
+              setSearch(val);
+              setPageInmuebles(1);
+            }}
+            placeholderBusqueda="Buscar por placa vehicular, apartamento, torre, nombre o teléfono..."
+            orden={ordenInmuebles}
+            onOrdenChange={(val) => {
+              setOrdenInmuebles(val);
+              setPageInmuebles(1);
+            }}
+            opcionesOrden={[
+              { valor: 'identificador_asc', etiqueta: 'Orden: Apto (Ascendente)' },
+              { valor: 'identificador_desc', etiqueta: 'Orden: Apto (Descendente)' },
+              { valor: 'torre_asc', etiqueta: 'Orden: Por Torre' },
+              { valor: 'piso_asc', etiqueta: 'Orden: Piso (Menor a Mayor)' },
+              { valor: 'piso_desc', etiqueta: 'Orden: Piso (Mayor a Menor)' },
+              { valor: 'personas_desc', etiqueta: 'Orden: Más Residentes' },
+              { valor: 'mascotas_desc', etiqueta: 'Orden: Más Mascotas' },
+              { valor: 'vehiculos_desc', etiqueta: 'Orden: Más Vehículos' },
+            ]}
+            labelOrden="Criterio de ordenamiento de unidades"
+            vista={vistaInmuebles}
+            onVistaChange={(v) => {
+              setVistaInmuebles(v);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('vista_censo_inmuebles', v);
+              }
+            }}
+            drawerFiltrosAbierto={drawerFiltrosInmuebles}
+            onToggleDrawerFiltros={() => setDrawerFiltrosInmuebles((prev) => !prev)}
+            filtrosActivosCount={totalFiltrosInmueblesActivos}
+            tituloFiltros="Filtros de unidades"
+            onLimpiarFiltros={() => {
+              setFiltroTorreInmuebles('todos');
+              setFiltroOcupacionInmuebles('todos');
+              setFiltroDemografia('todos');
+              setFiltroTipoResidente('todos');
+              setFiltroMascotas('todos');
+              setFiltroTag('todos');
+              setFiltroEstado('todos');
+              setPageInmuebles(1);
+            }}
+          >
+            {torresDisponibles.length > 0 && (
+              <div>
+                <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                  Torre
+                </label>
                 <select
-                  value={filtroOcupacionInmuebles}
-                  onChange={(e) => setFiltroOcupacionInmuebles(e.target.value)}
-                  className="select select-sm text-xs"
+                  value={filtroTorreInmuebles}
+                  onChange={(e) => {
+                    setFiltroTorreInmuebles(e.target.value);
+                    setPageInmuebles(1);
+                  }}
+                  className="select select-sm text-xs w-full"
                 >
-                  <option value="todos">Ocupación: Todas</option>
-                  <option value="habitada">Habitada</option>
-                  <option value="desocupada">Desocupada</option>
-                </select>
-
-                <select
-                  value={ordenInmuebles}
-                  onChange={(e) => setOrdenInmuebles(e.target.value)}
-                  className="select select-sm text-xs font-medium"
-                >
-                  <option value="identificador_asc">Orden: Apto (Ascendente)</option>
-                  <option value="identificador_desc">Orden: Apto (Descendente)</option>
-                  <option value="torre_asc">Orden: Por Torre</option>
-                  <option value="piso_asc">Orden: Piso (Menor a Mayor)</option>
-                  <option value="piso_desc">Orden: Piso (Mayor a Menor)</option>
-                  <option value="metros_desc">Orden: Mayor Área</option>
-                  <option value="metros_asc">Orden: Menor Área</option>
-                  <option value="personas_desc">Orden: Más Residentes</option>
-                  <option value="mascotas_desc">Orden: Más Mascotas</option>
-                  <option value="vehiculos_desc">Orden: Más Vehículos</option>
+                  <option value="todos">Todas las torres</option>
+                  {torresDisponibles.map((t) => (
+                    <option key={t} value={t}>Torre {t}</option>
+                  ))}
                 </select>
               </div>
+            )}
+
+            <div>
+              <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                Ocupación
+              </label>
+              <select
+                value={filtroOcupacionInmuebles}
+                onChange={(e) => {
+                  setFiltroOcupacionInmuebles(e.target.value);
+                  setPageInmuebles(1);
+                }}
+                className="select select-sm text-xs w-full"
+              >
+                <option value="todos">Todas</option>
+                <option value="habitada">Habitada</option>
+                <option value="desocupada">Desocupada</option>
+              </select>
             </div>
 
-            {/* Fila 2: Filtros Seccionados (Demografía, Residentes, Mascotas, Tags, Estado) */}
-            <div className="pt-2 border-t border-base-200 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              <div>
-                <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
-                  Demografía
-                </label>
-                <select
-                  value={filtroDemografia}
-                  onChange={(e) => setFiltroDemografia(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Todas las edades</option>
-                  <option value="menores">🧒 Menores (&lt;18)</option>
-                  <option value="mayores">🧓 Adultos Mayores (60+)</option>
-                  <option value="discapacidad">♿ Con Discapacidad</option>
-                  <option value="condicion_especial">🧠 Condición Especial / Mental</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
-                  Tipo Residente
-                </label>
-                <select
-                  value={filtroTipoResidente}
-                  onChange={(e) => setFiltroTipoResidente(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Todos los tipos</option>
-                  <option value="propietario">Propietarios</option>
-                  <option value="arrendatario">Arrendatarios</option>
-                  <option value="habitante">Habitantes / Convivientes</option>
-                  <option value="visitante">Visitantes Frecuentes</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
-                  Mascotas
-                </label>
-                <select
-                  value={filtroMascotas}
-                  onChange={(e) => setFiltroMascotas(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Todas</option>
-                  <option value="con_mascotas">🐾 Con Mascotas</option>
-                  <option value="manejo_especial">⚠️ Manejo Especial / Agresivos</option>
-                  <option value="sin_mascotas">Sin Mascotas</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
-                  Tags / Estado Pago
-                </label>
-                <select
-                  value={filtroTag}
-                  onChange={(e) => setFiltroTag(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Todos los tags</option>
-                  <option value="moroso">🚨 Morosos</option>
-                  <option value="al_dia">✅ Al Día</option>
-                  <option value="otros">Otros Tags</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
-                  Validación Admin
-                </label>
-                <select
-                  value={filtroEstado}
-                  onChange={(e) => setFiltroEstado(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Todos los estados</option>
-                  <option value="aprobados">Solo Aprobados</option>
-                  <option value="pendientes">Pendientes Validación</option>
-                  <option value="actualizaciones">Con Actualizaciones</option>
-                </select>
-              </div>
+            <div>
+              <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                Demografía
+              </label>
+              <select
+                value={filtroDemografia}
+                onChange={(e) => {
+                  setFiltroDemografia(e.target.value);
+                  setPageInmuebles(1);
+                }}
+                className="select select-sm text-xs w-full"
+              >
+                <option value="todos">Todas las edades</option>
+                <option value="menores">🧒 Menores (&lt;18)</option>
+                <option value="mayores">🧓 Adultos Mayores (60+)</option>
+                <option value="discapacidad">♿ Con Discapacidad</option>
+                <option value="condicion_especial">🧠 Condición Especial</option>
+              </select>
             </div>
-          </div>
+
+            <div>
+              <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                Tipo Residente
+              </label>
+              <select
+                value={filtroTipoResidente}
+                onChange={(e) => {
+                  setFiltroTipoResidente(e.target.value);
+                  setPageInmuebles(1);
+                }}
+                className="select select-sm text-xs w-full"
+              >
+                <option value="todos">Todos los tipos</option>
+                <option value="propietario">Propietarios</option>
+                <option value="arrendatario">Arrendatarios</option>
+                <option value="habitante">Habitantes / Convivientes</option>
+                <option value="visitante">Visitantes Frecuentes</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                Mascotas
+              </label>
+              <select
+                value={filtroMascotas}
+                onChange={(e) => {
+                  setFiltroMascotas(e.target.value);
+                  setPageInmuebles(1);
+                }}
+                className="select select-sm text-xs w-full"
+              >
+                <option value="todos">Todas</option>
+                <option value="con_mascotas">🐾 Con Mascotas</option>
+                <option value="manejo_especial">⚠️ Manejo Especial / Agresivos</option>
+                <option value="sin_mascotas">Sin Mascotas</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                Tags / Estado Pago
+              </label>
+              <select
+                value={filtroTag}
+                onChange={(e) => {
+                  setFiltroTag(e.target.value);
+                  setPageInmuebles(1);
+                }}
+                className="select select-sm text-xs w-full"
+              >
+                <option value="todos">Todos los tags</option>
+                <option value="moroso">🚨 Morosos</option>
+                <option value="al_dia">✅ Al Día</option>
+                <option value="otros">Otros Tags</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                Validación Admin
+              </label>
+              <select
+                value={filtroEstado}
+                onChange={(e) => {
+                  setFiltroEstado(e.target.value);
+                  setPageInmuebles(1);
+                }}
+                className="select select-sm text-xs w-full"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="aprobados">Solo Aprobados</option>
+                <option value="pendientes">Pendientes Validación</option>
+                <option value="actualizaciones">Con Actualizaciones</option>
+              </select>
+            </div>
+          </BarraBusquedaFiltros>
 
           {/* Tabla de Unidades Inmuebles */}
           <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
@@ -1198,7 +1314,7 @@ export default function CensoDashboardPage() {
                   )}
                 </div>
               </div>
-            ) : (
+            ) : vistaInmuebles === 'tabla' ? (
               <div className="overflow-x-auto">
                 <table className="table table-hover">
                   <thead>
@@ -1212,7 +1328,7 @@ export default function CensoDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {unidadesFiltradas.map((u) => {
+                    {unidadesPaginadas.map((u) => {
                       const numMenores = u.personas?.filter((p) => calcularEdad(p.fechaNacimiento) < 18).length || 0;
                       const numMayores = u.personas?.filter((p) => calcularEdad(p.fechaNacimiento) >= 60).length || 0;
                       const tieneDiscapacidad = u.personas?.some((p) => p.discapacidad);
@@ -1376,57 +1492,34 @@ export default function CensoDashboardPage() {
 
                           {/* Acciones */}
                           <td className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                            <BotoneraAccionesTabla
+                              verUrl={`/dashboard/censo/${u._id}`}
+                              tituloVer="Ver ficha completa"
+                              editarUrl={`/dashboard/censo/${u._id}/edit`}
+                              tituloEditar="Editar unidad"
+                              onEliminar={() => eliminarUnidad(u._id, u.identificador)}
+                              deshabilitarEliminar={procesandoId === u._id}
+                              onAprobar={u.estado !== 'aprobado' ? () => aprobarUnidad(u._id) : undefined}
+                              deshabilitarAprobar={procesandoId === u._id}
+                              tituloAprobar="Aprobar censo"
+                              onRechazar={u.estado !== 'aprobado' ? () => rechazarUnidad(u._id) : undefined}
+                              deshabilitarRechazar={procesandoId === u._id}
+                              tituloRechazar="Rechazar censo"
+                            >
                               <button
+                                type="button"
                                 onClick={() => toggleTagInmueble(u, 'MOROSO')}
-                                className={`btn btn-square btn-ghost btn-xs ${esMoroso ? 'text-error font-bold' : 'text-base-content/40 hover:text-error'}`}
+                                className={`inline-flex items-center justify-center w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-lg border text-sm transition-all ${
+                                  esMoroso
+                                    ? 'bg-error text-error-content border-error font-bold'
+                                    : 'bg-base-200 text-base-content/70 border-base-300 hover:text-error hover:border-error/40'
+                                }`}
                                 title={esMoroso ? 'Quitar tag Moroso' : 'Marcar como Moroso'}
+                                aria-label={esMoroso ? 'Quitar tag Moroso' : 'Marcar como Moroso'}
                               >
                                 <span className="icon-[tabler--tag] text-base" />
                               </button>
-                              {u.estado !== 'aprobado' && (
-                                <>
-                                  <button
-                                    onClick={() => aprobarUnidad(u._id)}
-                                    disabled={procesandoId === u._id}
-                                    className="btn btn-square btn-ghost btn-xs text-success"
-                                    title="Aprobar censo"
-                                  >
-                                    <span className="icon-[tabler--check] text-lg" />
-                                  </button>
-                                  <button
-                                    onClick={() => rechazarUnidad(u._id)}
-                                    disabled={procesandoId === u._id}
-                                    className="btn btn-square btn-ghost btn-xs text-error"
-                                    title="Rechazar censo"
-                                  >
-                                    <span className="icon-[tabler--x] text-lg" />
-                                  </button>
-                                </>
-                              )}
-                              <Link
-                                href={`/dashboard/censo/${u._id}`}
-                                className="btn btn-square btn-ghost btn-xs text-info"
-                                title="Ver ficha completa"
-                              >
-                                <span className="icon-[tabler--eye] text-lg" />
-                              </Link>
-                              <Link
-                                href={`/dashboard/censo/${u._id}/edit`}
-                                className="btn btn-square btn-ghost btn-xs"
-                                title="Editar"
-                              >
-                                <span className="icon-[tabler--edit] text-lg" />
-                              </Link>
-                              <button
-                                onClick={() => eliminarUnidad(u._id, u.identificador)}
-                                disabled={procesandoId === u._id}
-                                className="btn btn-square btn-ghost btn-xs text-error"
-                                title="Eliminar"
-                              >
-                                <span className="icon-[tabler--trash] text-lg" />
-                              </button>
-                            </div>
+                            </BotoneraAccionesTabla>
                           </td>
                         </tr>
                       );
@@ -1434,6 +1527,176 @@ export default function CensoDashboardPage() {
                   </tbody>
                 </table>
               </div>
+            ) : (
+              /* Vista en Tarjetas / Cuadrícula */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                {unidadesPaginadas.map((u) => {
+                  const numMenores = u.personas?.filter((p) => calcularEdad(p.fechaNacimiento) < 18).length || 0;
+                  const numMayores = u.personas?.filter((p) => calcularEdad(p.fechaNacimiento) >= 60).length || 0;
+                  const esMoroso = (u.tags || []).some((t) => t.toUpperCase() === 'MOROSO');
+
+                  return (
+                    <div
+                      key={u._id}
+                      className={`card bg-base-100 shadow-sm border ${
+                        u.estado !== 'aprobado' ? 'border-warning/60 bg-warning/5' : 'border-base-200'
+                      } p-4 flex flex-col justify-between gap-3`}
+                    >
+                      <div>
+                        {/* Cabecera de la tarjeta */}
+                        <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-base-200">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-base text-base-content">{u.identificador}</h3>
+                              {esMoroso && (
+                                <span className="badge badge-xs badge-error font-bold text-3xs">
+                                  🚨 MOROSO
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-2xs text-base-content/70 mt-0.5">
+                              {u.torre && <span>Torre {u.torre}</span>}
+                              {u.piso !== undefined && <span>• Piso {u.piso}</span>}
+                              {u.cuartos && <span>• {u.cuartos} hab.</span>}
+                              {u.metrosCuadrados && <span>• {u.metrosCuadrados} m²</span>}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={`badge badge-xs font-semibold ${
+                                u.estado === 'aprobado'
+                                  ? 'badge-success'
+                                  : u.estado === 'pendiente'
+                                    ? 'badge-warning'
+                                    : u.estado === 'rechazado'
+                                      ? 'badge-error'
+                                      : 'badge-info'
+                              }`}
+                            >
+                              {u.estado}
+                            </span>
+                            <span
+                              className={`badge badge-2xs ${
+                                u.tipoOcupacion === 'habitada' ? 'badge-soft badge-success' : 'badge-soft badge-ghost'
+                              }`}
+                            >
+                              {u.tipoOcupacion}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Detalles de la unidad */}
+                        <div className="mt-2.5 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-base-content/60 flex items-center gap-1">
+                              <span className="icon-[tabler--users] text-primary text-sm" />
+                              Residentes:
+                            </span>
+                            <span className="font-semibold text-base-content">
+                              {u.personas?.length || 0} personas
+                              {numMenores > 0 && ` (${numMenores} menor${numMenores > 1 ? 'es' : ''})`}
+                              {numMayores > 0 && ` (${numMayores} ad. mayor${numMayores > 1 ? 'es' : ''})`}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-base-content/60 flex items-center gap-1">
+                              <span className="icon-[tabler--paw] text-secondary text-sm" />
+                              Mascotas:
+                            </span>
+                            <span className="font-medium text-base-content">
+                              {u.mascotas && u.mascotas.length > 0 ? (
+                                <span className="badge badge-xs badge-soft badge-secondary">
+                                  {u.mascotas.length} mascota{u.mascotas.length > 1 ? 's' : ''}
+                                </span>
+                              ) : (
+                                <span className="text-base-content/40">Sin mascotas</span>
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-base-content/60 flex items-center gap-1">
+                              <span className="icon-[tabler--car] text-info text-sm" />
+                              Vehículos:
+                            </span>
+                            <span className="font-medium text-base-content">
+                              {u.vehiculos && u.vehiculos.length > 0 ? (
+                                <div className="flex flex-wrap gap-1 justify-end">
+                                  {u.vehiculos.map((v, i) => (
+                                    <span key={i} className="badge badge-2xs badge-soft badge-primary font-mono">
+                                      {v.placa}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-base-content/40">Sin vehículos</span>
+                              )}
+                            </span>
+                          </div>
+
+                          {(u.parqueaderosAsignados?.length || u.bodegasAsignadas?.length) ? (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                              {u.parqueaderosAsignados?.map((p) => (
+                                <span key={p.numero} className="badge badge-2xs badge-soft badge-primary font-mono">
+                                  🚗 Parq {p.numero}
+                                </span>
+                              ))}
+                              {u.bodegasAsignadas?.map((b) => (
+                                <span key={b.numero} className="badge badge-2xs badge-soft badge-info font-mono">
+                                  📦 Bodega {b.numero}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Footer Acciones */}
+                      <div className="pt-2.5 border-t border-base-200">
+                        <BotoneraAccionesTabla
+                          verUrl={`/dashboard/censo/${u._id}`}
+                          tituloVer="Ver ficha completa"
+                          editarUrl={`/dashboard/censo/${u._id}/edit`}
+                          tituloEditar="Editar unidad"
+                          onEliminar={() => eliminarUnidad(u._id, u.identificador)}
+                          deshabilitarEliminar={procesandoId === u._id}
+                          onAprobar={u.estado !== 'aprobado' ? () => aprobarUnidad(u._id) : undefined}
+                          deshabilitarAprobar={procesandoId === u._id}
+                          tituloAprobar="Aprobar censo"
+                          onRechazar={u.estado !== 'aprobado' ? () => rechazarUnidad(u._id) : undefined}
+                          deshabilitarRechazar={procesandoId === u._id}
+                          tituloRechazar="Rechazar censo"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleTagInmueble(u, 'MOROSO')}
+                            className={`inline-flex items-center justify-center w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-lg border text-sm transition-all ${
+                              esMoroso
+                                ? 'bg-error text-error-content border-error font-bold'
+                                : 'bg-base-200 text-base-content/70 border-base-300 hover:text-error hover:border-error/40'
+                            }`}
+                            title={esMoroso ? 'Quitar tag Moroso' : 'Marcar como Moroso'}
+                            aria-label={esMoroso ? 'Quitar tag Moroso' : 'Marcar como Moroso'}
+                          >
+                            <span className="icon-[tabler--tag] text-base" />
+                          </button>
+                        </BotoneraAccionesTabla>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!loading && unidadesFiltradas.length > 0 && (
+              <Paginacion
+                currentPage={pageInmuebles}
+                totalItems={unidadesFiltradas.length}
+                itemsPerPage={itemsPerPageInmuebles}
+                onPageChange={setPageInmuebles}
+                onItemsPerPageChange={setItemsPerPageInmuebles}
+              />
             )}
           </div>
         </div>
@@ -1513,69 +1776,34 @@ export default function CensoDashboardPage() {
             </div>
           </div>
 
-          {/* Filtros Residentes */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4">
-            <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Filtros Residentes (Fila única + Drawer) */}
+          <div className="card bg-base-100 shadow-sm border border-base-200 p-3 sm:p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              {/* 1. Input de Búsqueda */}
               <div className="relative flex-1">
                 <span className="icon-[tabler--search] absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 text-base" />
                 <input
                   type="text"
                   value={searchResidente}
-                  onChange={(e) => setSearchResidente(e.target.value)}
+                  onChange={(e) => {
+                    setSearchResidente(e.target.value);
+                    setPageResidentes(1);
+                  }}
                   placeholder="Buscar por nombre, teléfono, correo, documento o apartamento..."
                   className="input input-sm w-full pl-9 text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                {torresDisponibles.length > 0 && (
-                  <select
-                    value={filtroTorreResidentes}
-                    onChange={(e) => setFiltroTorreResidentes(e.target.value)}
-                    className="select select-sm text-xs w-full"
-                  >
-                    <option value="todos">Torre: Todas</option>
-                    {torresDisponibles.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                )}
-
-                <select
-                  value={filtroCondicionResidente}
-                  onChange={(e) => setFiltroCondicionResidente(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Condición: Todos</option>
-                  <option value="propietario">Propietario</option>
-                  <option value="arrendatario">Arrendatario</option>
-                  <option value="conviviente">Conviviente / Familiar</option>
-                </select>
-
-                <select
-                  value={filtroGrupoEtarioResidente}
-                  onChange={(e) => setFiltroGrupoEtarioResidente(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Edad: Todos</option>
-                  <option value="menor">🧒 Menores (&lt;18)</option>
-                  <option value="adulto">🧑 Adultos (18-59)</option>
-                  <option value="adulto_mayor">🧓 Adultos Mayores (60+)</option>
-                </select>
-
-                <select
-                  value={filtroContactoPrincipal}
-                  onChange={(e) => setFiltroContactoPrincipal(e.target.value)}
-                  className="select select-sm text-xs w-full"
-                >
-                  <option value="todos">Contactos: Todos</option>
-                  <option value="solo_principales">★ Solo Principal</option>
-                </select>
-
+              {/* 2. Select Desplegable de Orden */}
+              <div className="flex items-center gap-2 shrink-0">
                 <select
                   value={ordenResidentes}
-                  onChange={(e) => setOrdenResidentes(e.target.value)}
-                  className="select select-sm text-xs w-full font-medium"
+                  onChange={(e) => {
+                    setOrdenResidentes(e.target.value);
+                    setPageResidentes(1);
+                  }}
+                  className="select select-sm text-xs font-medium"
+                  aria-label="Criterio de orden de residentes"
                 >
                   <option value="nombre_asc">Orden: Nombre (A - Z)</option>
                   <option value="nombre_desc">Orden: Nombre (Z - A)</option>
@@ -1584,8 +1812,143 @@ export default function CensoDashboardPage() {
                   <option value="edad_desc">Orden: Mayor a Menor Edad</option>
                   <option value="condicion_asc">Orden: Por Condición</option>
                 </select>
+
+                {/* 3. Botón de Filtros con Desplegable Drawer */}
+                <button
+                  type="button"
+                  onClick={() => setDrawerFiltrosResidentes((prev) => !prev)}
+                  className={`btn btn-sm gap-1.5 font-medium transition-colors ${
+                    drawerFiltrosResidentes || totalFiltrosResidentesActivos > 0
+                      ? 'btn-primary'
+                      : 'btn-outline'
+                  }`}
+                  aria-expanded={drawerFiltrosResidentes}
+                >
+                  <span className="icon-[tabler--adjustments-horizontal] text-base" aria-hidden="true" />
+                  <span>Filtros</span>
+                  {totalFiltrosResidentesActivos > 0 && (
+                    <span className="badge badge-xs badge-warning font-bold px-1.5 py-0.5">
+                      {totalFiltrosResidentesActivos}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
+
+            {/* Panel Desplegable (Drawer) de Filtros Residentes */}
+            {drawerFiltrosResidentes && (
+              <div className="pt-3 border-t border-base-200/80 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-base-content/70 flex items-center gap-1.5">
+                    <span className="icon-[tabler--filter] text-primary" />
+                    Filtros de residentes
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {totalFiltrosResidentesActivos > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFiltroTorreResidentes('todos');
+                          setFiltroCondicionResidente('todos');
+                          setFiltroGrupoEtarioResidente('todos');
+                          setFiltroContactoPrincipal('todos');
+                          setPageResidentes(1);
+                        }}
+                        className="text-xs text-error hover:underline font-medium"
+                      >
+                        Limpiar filtros ({totalFiltrosResidentesActivos})
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDrawerFiltrosResidentes(false)}
+                      className="btn btn-ghost btn-xs btn-circle text-base-content/60"
+                      aria-label="Cerrar filtros de residentes"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {torresDisponibles.length > 0 && (
+                    <div>
+                      <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                        Torre
+                      </label>
+                      <select
+                        value={filtroTorreResidentes}
+                        onChange={(e) => {
+                          setFiltroTorreResidentes(e.target.value);
+                          setPageResidentes(1);
+                        }}
+                        className="select select-sm text-xs w-full"
+                      >
+                        <option value="todos">Todas las torres</option>
+                        {torresDisponibles.map((t) => (
+                          <option key={t} value={t}>Torre {t}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                      Condición
+                    </label>
+                    <select
+                      value={filtroCondicionResidente}
+                      onChange={(e) => {
+                        setFiltroCondicionResidente(e.target.value);
+                        setPageResidentes(1);
+                      }}
+                      className="select select-sm text-xs w-full"
+                    >
+                      <option value="todos">Todos</option>
+                      <option value="propietario">Propietario</option>
+                      <option value="arrendatario">Arrendatario</option>
+                      <option value="conviviente">Conviviente / Familiar</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                      Grupo Etario
+                    </label>
+                    <select
+                      value={filtroGrupoEtarioResidente}
+                      onChange={(e) => {
+                        setFiltroGrupoEtarioResidente(e.target.value);
+                        setPageResidentes(1);
+                      }}
+                      className="select select-sm text-xs w-full"
+                    >
+                      <option value="todos">Todos</option>
+                      <option value="menor">🧒 Menores (&lt;18)</option>
+                      <option value="adulto">🧑 Adultos (18-59)</option>
+                      <option value="adulto_mayor">🧓 Adultos Mayores (60+)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+                      Contacto Principal
+                    </label>
+                    <select
+                      value={filtroContactoPrincipal}
+                      onChange={(e) => {
+                        setFiltroContactoPrincipal(e.target.value);
+                        setPageResidentes(1);
+                      }}
+                      className="select select-sm text-xs w-full"
+                    >
+                      <option value="todos">Todos</option>
+                      <option value="solo_principales">★ Solo Principal</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tabla Residentes */}
@@ -1609,7 +1972,7 @@ export default function CensoDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {residentesFiltrados.map((r, idx) => (
+                    {residentesPaginados.map((r, idx) => (
                       <tr key={`${r.unidadId}-${idx}`}>
                         <td>
                           <div className="font-bold text-base-content flex items-center gap-1.5">
@@ -1690,19 +2053,26 @@ export default function CensoDashboardPage() {
                           )}
                         </td>
                         <td className="text-right">
-                          <Link
-                            href={`/dashboard/censo/${r.unidadId}`}
-                            className="btn btn-square btn-ghost btn-xs text-info"
-                            title="Ver ficha de la vivienda"
-                          >
-                            <span className="icon-[tabler--eye] text-base" />
-                          </Link>
+                          <BotoneraAccionesTabla
+                            verUrl={`/dashboard/censo/${r.unidadId}`}
+                            tituloVer="Ver ficha de la vivienda"
+                          />
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {residentesFiltrados.length > 0 && (
+              <Paginacion
+                currentPage={pageResidentes}
+                totalItems={residentesFiltrados.length}
+                itemsPerPage={itemsPerPageResidentes}
+                onPageChange={setPageResidentes}
+                onItemsPerPageChange={setItemsPerPageResidentes}
+              />
             )}
           </div>
         </div>
@@ -1882,7 +2252,7 @@ export default function CensoDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {parqueaderosFiltrados.map((p) => {
+                    {parqueaderosPaginados.map((p) => {
                       const num = p.numero.trim().toUpperCase();
                       const vehiculo = mapaVehiculosPorParq.get(num);
                       const u = mapaUnidadesPorParq.get(num);
@@ -1991,21 +2361,12 @@ export default function CensoDashboardPage() {
                           </td>
                           <td className="text-right">
                             {u ? (
-                              <Link
-                                href={`/dashboard/censo/${u._id}`}
-                                className="btn btn-square btn-ghost btn-xs text-info"
-                                title={`Ver ficha de la vivienda (${u.identificador})`}
-                              >
-                                <span className="icon-[tabler--eye] text-base" />
-                              </Link>
+                              <BotoneraAccionesTabla
+                                verUrl={`/dashboard/censo/${u._id}`}
+                                tituloVer={`Ver ficha de la vivienda (${u.identificador})`}
+                              />
                             ) : (
-                              <button
-                                disabled
-                                className="btn btn-square btn-ghost btn-xs opacity-30 cursor-not-allowed"
-                                title={p.esVisitante ? 'Uso común visitantes' : 'Sin unidad vinculada'}
-                              >
-                                <span className="icon-[tabler--eye-off] text-base" />
-                              </button>
+                              <span className="text-xs text-base-content/40 italic">-</span>
                             )}
                           </td>
                         </tr>
@@ -2014,6 +2375,16 @@ export default function CensoDashboardPage() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {parqueaderosFiltrados.length > 0 && (
+              <Paginacion
+                currentPage={pageParq}
+                totalItems={parqueaderosFiltrados.length}
+                itemsPerPage={itemsPerPageParq}
+                onPageChange={setPageParq}
+                onItemsPerPageChange={setItemsPerPageParq}
+              />
             )}
           </div>
         </div>
@@ -2144,7 +2515,7 @@ export default function CensoDashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {bodegasFiltradas.map((b) => {
+                    {bodegasPaginadas.map((b) => {
                       const num = b.numero.trim().toUpperCase();
                       const u = mapaUnidadesPorBodega.get(num);
 
@@ -2188,21 +2559,12 @@ export default function CensoDashboardPage() {
                           </td>
                           <td className="text-right">
                             {u ? (
-                              <Link
-                                href={`/dashboard/censo/${u._id}`}
-                                className="btn btn-square btn-ghost btn-xs text-info"
-                                title={`Ver ficha de la vivienda (${u.identificador})`}
-                              >
-                                <span className="icon-[tabler--eye] text-base" />
-                              </Link>
+                              <BotoneraAccionesTabla
+                                verUrl={`/dashboard/censo/${u._id}`}
+                                tituloVer={`Ver ficha de la vivienda (${u.identificador})`}
+                              />
                             ) : (
-                              <button
-                                disabled
-                                className="btn btn-square btn-ghost btn-xs opacity-30 cursor-not-allowed"
-                                title="Sin unidad vinculada"
-                              >
-                                <span className="icon-[tabler--eye-off] text-base" />
-                              </button>
+                              <span className="text-xs text-base-content/40 italic">-</span>
                             )}
                           </td>
                         </tr>
@@ -2211,6 +2573,16 @@ export default function CensoDashboardPage() {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {bodegasFiltradas.length > 0 && (
+              <Paginacion
+                currentPage={pageBodegas}
+                totalItems={bodegasFiltradas.length}
+                itemsPerPage={itemsPerPageBodegas}
+                onPageChange={setPageBodegas}
+                onItemsPerPageChange={setItemsPerPageBodegas}
+              />
             )}
           </div>
         </div>

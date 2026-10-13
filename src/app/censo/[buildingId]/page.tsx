@@ -481,62 +481,76 @@ export default function PublicCensoPage() {
 
   return (
     <div className="min-h-screen bg-base-200 py-6 px-4">
-      <div className="max-w-xl mx-auto space-y-6">
+      <div className="max-w-xl mx-auto space-y-5">
         {/* Cabecera Móvil */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-            <span className="icon-[tabler--building-community] text-sm" />
-            {edificioNombre}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-bold text-sm">
+            <span className="icon-[tabler--building-community] text-lg" />
+            <span>{edificioNombre}</span>
           </div>
-          <h1 className="text-2xl font-bold text-base-content">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-base-content">
             Censo Habitacional Digital
           </h1>
-          <p className="text-xs text-base-content/60">
+          <p className="text-sm sm:text-base text-base-content/85 font-medium max-w-lg mx-auto">
             Diligencia los datos de los habitantes de tu inmueble, mascotas y vehículos para el control y seguridad del conjunto.
           </p>
         </div>
 
+        <div className="callout-indicativo flex items-start gap-2.5">
+          <span className="icon-[tabler--shield-lock] text-primary text-xl shrink-0 mt-0.5" />
+          <p className="text-sm font-medium">
+            <strong>Indicación importante:</strong> Esta información es de uso exclusivo y confidencial para la administración de <strong>{edificioNombre}</strong>. Completa cada paso con tranquilidad.
+          </p>
+        </div>
+
         {errorMsg && (
-          <div className="alert alert-error shadow-xs text-xs">
-            <span className="icon-[tabler--alert-circle] text-lg" />
+          <div className="alert alert-error shadow-sm text-sm font-semibold">
+            <span className="icon-[tabler--alert-circle] text-xl shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={enviarCenso} className="space-y-4">
+        <form onSubmit={enviarCenso} className="space-y-5">
           {/* 1. Apartamento / Casa */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-4 space-y-3">
-            <h2 className="text-sm font-bold flex items-center gap-2 text-base-content border-b pb-2 border-base-content/10">
-              <span className="icon-[tabler--home] text-primary text-base" />
-              1. Tu Apartamento o Casa
-            </h2>
+          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+            <div className="flex items-center gap-2.5 border-b pb-3 border-base-200">
+              <span className="icon-[tabler--home] text-primary text-2xl shrink-0" />
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-base-content">
+                  Paso 1: Tu Apartamento o Casa
+                </h2>
+                <p className="text-xs sm:text-sm text-base-content/80 font-medium">
+                  Indica el inmueble donde resides actualmente
+                </p>
+              </div>
+            </div>
 
             {catalogo.length > 0 && !modoManual ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xs font-semibold text-base-content/80">
-                    Selecciona tu vivienda de la lista oficial ({catalogo.length} unidades disponibles)
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <span className="text-xs sm:text-sm font-semibold text-base-content">
+                    Selecciona tu vivienda de la lista ({catalogo.length} unidades disponibles)
                   </span>
                   <button
                     type="button"
                     onClick={() => setModoManual(true)}
-                    className="text-2xs text-primary hover:underline font-medium"
+                    className="text-xs text-primary hover:underline font-bold text-left"
                   >
-                    ¿No aparece en la lista? Escribir manual
+                    ¿No aparece? Escribir manual
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Selector 1: Torre */}
                   <div>
-                    <label className="label label-text text-2xs font-semibold">
+                    <label className="label label-text text-sm font-bold text-base-content">
                       1. Torre / Bloque {tieneTorres ? '*' : '(No aplica)'}
                     </label>
                     <select
                       disabled={!tieneTorres}
                       value={tieneTorres ? selectedTorreFiltro : ''}
                       onChange={(e) => handleSelectTorre(e.target.value)}
-                      className="select select-sm w-full"
+                      className="select select-sm w-full font-medium"
                     >
                       {tieneTorres ? (
                         <>
@@ -552,7 +566,7 @@ export default function PublicCensoPage() {
                       )}
                     </select>
                     {!tieneTorres && (
-                      <p className="text-3xs text-base-content/50 mt-1">
+                      <p className="text-xs text-base-content/80 mt-1 font-medium">
                         Este conjunto no maneja división por torres.
                       </p>
                     )}
@@ -560,7 +574,7 @@ export default function PublicCensoPage() {
 
                   {/* Selector 2: Apartamento / Inmueble */}
                   <div>
-                    <label className="label label-text text-2xs font-semibold">
+                    <label className="label label-text text-sm font-bold text-base-content">
                       2. Apartamento / Casa *
                     </label>
                     <select
@@ -568,7 +582,7 @@ export default function PublicCensoPage() {
                       disabled={tieneTorres && !selectedTorreFiltro}
                       value={selectedUnidadId}
                       onChange={(e) => handleSelectUnidad(e.target.value)}
-                      className="select select-sm w-full"
+                      className="select select-sm w-full font-medium"
                     >
                       <option value="">
                         {tieneTorres && !selectedTorreFiltro
@@ -582,7 +596,7 @@ export default function PublicCensoPage() {
                       ))}
                     </select>
                     {tieneTorres && selectedTorreFiltro && (
-                      <p className="text-3xs text-base-content/50 mt-1">
+                      <p className="text-xs text-base-content/80 mt-1 font-medium">
                         Mostrando apartamentos de {selectedTorreFiltro}
                       </p>
                     )}
@@ -638,7 +652,7 @@ export default function PublicCensoPage() {
                 )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="label label-text text-2xs font-semibold">
+                    <label className="label label-text text-sm font-bold text-base-content">
                       Torre / Bloque {tieneTorres ? '' : '(Opcional)'}
                     </label>
                     <input
@@ -651,7 +665,7 @@ export default function PublicCensoPage() {
                     />
                   </div>
                   <div>
-                    <label className="label label-text text-2xs font-semibold">Número de Apto o Casa *</label>
+                    <label className="label label-text text-sm font-bold text-base-content">Número de Apto o Casa *</label>
                     <input
                       type="text"
                       required
@@ -663,7 +677,7 @@ export default function PublicCensoPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="label label-text text-2xs font-semibold">Identificador Completo</label>
+                  <label className="label label-text text-sm font-bold text-base-content">Identificador Completo</label>
                   <input
                     type="text"
                     value={identificador || (torre && numeroApto ? `${torre} - Apto ${numeroApto}` : numeroApto ? `Apto ${numeroApto}` : '')}
@@ -677,35 +691,42 @@ export default function PublicCensoPage() {
           </div>
 
           {/* 2. Habitantes */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-4 space-y-3">
-            <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
-              <h2 className="text-sm font-bold flex items-center gap-2 text-base-content">
-                <span className="icon-[tabler--users] text-primary text-base" />
-                2. Personas que Habitan ({personas.length})
-              </h2>
+          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-base-200">
+              <div className="flex items-center gap-2.5">
+                <span className="icon-[tabler--users] text-primary text-2xl shrink-0" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-base-content">
+                    Paso 2: Personas que Habitan ({personas.length})
+                  </h2>
+                  <p className="text-xs sm:text-sm text-base-content/80 font-medium">
+                    Registra a cada miembro del hogar. Debe haber un Contacto Principal adulto.
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={agregarPersona}
-                className="btn btn-outline btn-primary btn-xs"
+                className="btn btn-outline btn-primary btn-sm gap-1.5 font-semibold self-start sm:self-auto"
               >
-                <span className="icon-[tabler--plus]" />
-                Agregar
+                <span className="icon-[tabler--plus] text-base" />
+                <span>Agregar Habitante</span>
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {personas.map((p, idx) => {
                 const edad = p.fechaNacimiento ? calcularEdad(p.fechaNacimiento) : null;
                 const cat = edad !== null ? categorizarEdad(edad) : null;
                 const esMenor = edad !== null && edad < 18;
 
                 return (
-                  <div key={idx} className="p-3 rounded-lg bg-base-200/40 border border-base-content/10 space-y-2">
+                  <div key={idx} className="p-4 rounded-lg bg-base-200/40 border border-base-200 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold text-base-content/70 flex items-center gap-1.5">
-                        Persona #{idx + 1}
+                      <span className="text-sm font-bold text-base-content flex items-center gap-2">
+                        <span>Persona #{idx + 1}</span>
                         {p.esContactoPrincipal && (
-                          <span className="badge badge-2xs badge-primary font-semibold">
+                          <span className="badge badge-sm badge-primary font-bold">
                             Contacto Principal
                           </span>
                         )}
@@ -714,29 +735,30 @@ export default function PublicCensoPage() {
                         <button
                           type="button"
                           onClick={() => eliminarPersona(idx)}
-                          className="btn btn-ghost btn-xs text-error p-0 h-auto min-h-0"
+                          className="btn btn-outline btn-error btn-xs gap-1 font-semibold"
                           title="Eliminar habitante"
                         >
                           <span className="icon-[tabler--trash] text-sm" />
+                          <span>Eliminar</span>
                         </button>
                       )}
                     </div>
 
                     <div>
-                      <label className="label label-text text-2xs font-semibold">Nombre Completo *</label>
+                      <label className="label label-text text-sm font-bold text-base-content">Nombre Completo *</label>
                       <input
                         type="text"
                         required
                         value={p.nombreCompleto}
                         onChange={(e) => actualizarPersona(idx, 'nombreCompleto', e.target.value)}
                         placeholder="Ej. María Gómez"
-                        className="input input-xs w-full"
+                        className="input input-sm w-full font-medium"
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Fecha Nacimiento *</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Fecha de Nacimiento *</label>
                         <input
                           type="date"
                           required
@@ -744,16 +766,16 @@ export default function PublicCensoPage() {
                           max={FECHA_MAX_NACIMIENTO}
                           value={p.fechaNacimiento}
                           onChange={(e) => actualizarPersona(idx, 'fechaNacimiento', e.target.value)}
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                         {cat && (
-                          <div className="mt-1 flex flex-col gap-0.5">
-                            <span className={`badge badge-2xs ${cat.badgeClass}`}>
+                          <div className="mt-1.5 flex flex-col gap-1">
+                            <span className={`badge badge-sm font-semibold ${cat.badgeClass}`}>
                               {edad} años ({cat.label})
                             </span>
                             {esMenor && (
-                              <span className="text-3xs text-warning font-medium">
-                                Menor de edad (no propietario ni contacto principal)
+                              <span className="text-xs text-warning font-semibold">
+                                Menor de edad (no puede ser propietario ni contacto principal)
                               </span>
                             )}
                           </div>
@@ -761,11 +783,11 @@ export default function PublicCensoPage() {
                       </div>
 
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Condición en la vivienda</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Condición en la vivienda</label>
                         <select
                           value={p.condicion}
-                          onChange={(e) => actualizarPersona(idx, 'condicion', e.target.value as any)}
-                          className="select select-xs w-full"
+                          onChange={(e) => actualizarPersona(idx, 'condicion', e.target.value as PersonaForm['condicion'])}
+                          className="select select-sm w-full font-medium"
                         >
                           <option value="propietario" disabled={esMenor}>
                             Propietario {esMenor ? '(No permitido para menores)' : ''}
@@ -776,30 +798,30 @@ export default function PublicCensoPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Teléfono Móvil (7-15 dígitos)</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Teléfono Móvil (7-15 dígitos)</label>
                         <input
                           type="tel"
                           value={p.telefono}
                           onChange={(e) => actualizarPersona(idx, 'telefono', e.target.value)}
                           placeholder="3001234567"
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                       </div>
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Correo Electrónico</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Correo Electrónico</label>
                         <input
                           type="email"
                           value={p.email}
                           onChange={(e) => actualizarPersona(idx, 'email', e.target.value)}
                           placeholder="correo@ejemplo.com"
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2.5 pt-1">
                       <input
                         type="radio"
                         name="contactoPrincipalRadio"
@@ -807,15 +829,15 @@ export default function PublicCensoPage() {
                         disabled={esMenor}
                         checked={p.esContactoPrincipal}
                         onChange={() => actualizarPersona(idx, 'esContactoPrincipal', true)}
-                        className="radio radio-xs radio-primary"
+                        className="radio radio-primary w-5 h-5"
                       />
                       <label
                         htmlFor={`pub-p-${idx}`}
-                        className={`text-2xs cursor-pointer ${
-                          esMenor ? 'text-base-content/40 cursor-not-allowed' : 'text-base-content/80 font-medium'
+                        className={`text-sm cursor-pointer select-none ${
+                          esMenor ? 'text-base-content/40 cursor-not-allowed' : 'text-base-content font-bold'
                         }`}
                       >
-                        Designar como Contacto Principal de la Vivienda
+                        Designar como Contacto Principal de la vivienda
                         {esMenor && ' (Inhabilitado para menores)'}
                       </label>
                     </div>
@@ -826,37 +848,44 @@ export default function PublicCensoPage() {
           </div>
 
           {/* 3. Mascotas */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-4 space-y-3">
-            <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
-              <h2 className="text-sm font-bold flex items-center gap-2 text-base-content">
-                <span className="icon-[tabler--paw] text-secondary text-base" />
-                3. Mascotas
-              </h2>
-              <div className="flex items-center gap-2">
+          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-base-200">
+              <div className="flex items-center gap-2.5">
+                <span className="icon-[tabler--paw] text-secondary text-2xl shrink-0" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-base-content">
+                    Paso 3: Mascotas
+                  </h2>
+                  <p className="text-xs sm:text-sm text-base-content/80 font-medium">
+                    Perros, gatos u otros animales de compañía en la vivienda
+                  </p>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   id="chk-mascotas"
                   checked={tieneMascotas}
                   onChange={(e) => toggleMascotas(e.target.checked)}
-                  className="checkbox checkbox-xs checkbox-secondary"
+                  className="checkbox checkbox-secondary w-5 h-5 rounded-md"
                 />
-                <label htmlFor="chk-mascotas" className="text-2xs cursor-pointer font-medium">
+                <span className="text-sm font-bold text-base-content">
                   Tenemos mascotas
-                </label>
-              </div>
+                </span>
+              </label>
             </div>
 
             {tieneMascotas && (
               <div className="space-y-3">
                 {mascotas.map((m, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-base-200/40 border border-base-content/10 space-y-2">
+                  <div key={idx} className="p-4 rounded-lg bg-base-200/40 border border-base-200 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold">Mascota #{idx + 1}</span>
+                      <span className="text-sm font-bold text-base-content">Mascota #{idx + 1}</span>
                       {mascotas.length > 1 && (
                         <button
                           type="button"
                           onClick={() => eliminarMascota(idx)}
-                          className="btn btn-ghost btn-xs text-error p-0 h-auto min-h-0"
+                          className="btn btn-outline btn-error btn-xs gap-1 font-semibold"
                         >
                           <span className="icon-[tabler--trash] text-sm" />
                         </button>
@@ -865,11 +894,11 @@ export default function PublicCensoPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Tipo</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Tipo</label>
                         <select
                           value={m.tipo}
-                          onChange={(e) => actualizarMascota(idx, 'tipo', e.target.value as any)}
-                          className="select select-xs w-full"
+                          onChange={(e) => actualizarMascota(idx, 'tipo', e.target.value as MascotaForm['tipo'])}
+                          className="select select-sm w-full font-medium"
                         >
                           <option value="perro">Perro</option>
                           <option value="gato">Gato</option>
@@ -877,44 +906,44 @@ export default function PublicCensoPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Nombre *</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Nombre *</label>
                         <input
                           type="text"
                           required
                           value={m.nombre}
                           onChange={(e) => actualizarMascota(idx, 'nombre', e.target.value)}
                           placeholder="Nombre"
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                       </div>
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Raza</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Raza</label>
                         <input
                           type="text"
                           value={m.raza}
                           onChange={(e) => actualizarMascota(idx, 'raza', e.target.value)}
                           placeholder="Raza"
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1 pt-1">
-                      <label className="flex items-center gap-1.5 text-2xs cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer select-none font-medium">
                         <input
                           type="checkbox"
                           checked={m.esPeligroso}
                           onChange={(e) => actualizarMascota(idx, 'esPeligroso', e.target.checked)}
-                          className="checkbox checkbox-2xs checkbox-error"
+                          className="checkbox w-5 h-5 rounded-md checkbox-error"
                         />
-                        <span className="text-error font-medium">Es de raza potencialmente peligrosa / manejo especial</span>
+                        <span className="text-error font-bold">Es de raza potencialmente peligrosa / manejo especial</span>
                       </label>
-                      <label className="flex items-center gap-1.5 text-2xs cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer select-none font-medium">
                         <input
                           type="checkbox"
                           checked={m.vacunasAlDia}
                           onChange={(e) => actualizarMascota(idx, 'vacunasAlDia', e.target.checked)}
-                          className="checkbox checkbox-2xs checkbox-success"
+                          className="checkbox w-5 h-5 rounded-md checkbox-success"
                         />
                         <span>Carnet de vacunación al día</span>
                       </label>
@@ -925,7 +954,7 @@ export default function PublicCensoPage() {
                 <button
                   type="button"
                   onClick={agregarMascota}
-                  className="btn btn-outline btn-secondary btn-2xs w-full"
+                  className="btn btn-outline btn-secondary btn-sm w-full gap-1.5 font-semibold"
                 >
                   <span className="icon-[tabler--plus]" />
                   Agregar otra mascota
@@ -935,37 +964,44 @@ export default function PublicCensoPage() {
           </div>
 
           {/* 4. Vehículos */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-4 space-y-3">
-            <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
-              <h2 className="text-sm font-bold flex items-center gap-2 text-base-content">
-                <span className="icon-[tabler--car] text-success text-base" />
-                4. Vehículos
-              </h2>
-              <div className="flex items-center gap-2">
+          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-base-200">
+              <div className="flex items-center gap-2.5">
+                <span className="icon-[tabler--car] text-success text-2xl shrink-0" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-base-content">
+                    Paso 4: Vehículos
+                  </h2>
+                  <p className="text-xs sm:text-sm text-base-content/80 font-medium">
+                    Carros, motos, bicicletas o patinetas del inmueble
+                  </p>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   id="chk-vehiculos"
                   checked={tieneVehiculos}
                   onChange={(e) => toggleVehiculos(e.target.checked)}
-                  className="checkbox checkbox-xs checkbox-success"
+                  className="checkbox checkbox-success w-5 h-5 rounded-md"
                 />
-                <label htmlFor="chk-vehiculos" className="text-2xs cursor-pointer font-medium">
+                <span className="text-sm font-bold text-base-content">
                   Poseemos vehículos
-                </label>
-              </div>
+                </span>
+              </label>
             </div>
 
             {tieneVehiculos && (
               <div className="space-y-3">
                 {vehiculos.map((v, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-base-200/40 border border-base-content/10 space-y-2">
+                  <div key={idx} className="p-4 rounded-lg bg-base-200/40 border border-base-200 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold">Vehículo #{idx + 1}</span>
+                      <span className="text-sm font-bold text-base-content">Vehículo #{idx + 1}</span>
                       {vehiculos.length > 1 && (
                         <button
                           type="button"
                           onClick={() => eliminarVehiculo(idx)}
-                          className="btn btn-ghost btn-xs text-error p-0 h-auto min-h-0"
+                          className="btn btn-outline btn-error btn-xs gap-1 font-semibold"
                         >
                           <span className="icon-[tabler--trash] text-sm" />
                         </button>
@@ -974,11 +1010,11 @@ export default function PublicCensoPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Tipo</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Tipo</label>
                         <select
                           value={v.tipo}
-                          onChange={(e) => actualizarVehiculo(idx, 'tipo', e.target.value as any)}
-                          className="select select-xs w-full"
+                          onChange={(e) => actualizarVehiculo(idx, 'tipo', e.target.value as VehiculoForm['tipo'])}
+                          className="select select-sm w-full font-medium"
                         >
                           <option value="carro">Carro</option>
                           <option value="moto">Moto</option>
@@ -987,7 +1023,7 @@ export default function PublicCensoPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Placa (5 a 8 caracteres) *</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Placa (5 a 8 caracteres) *</label>
                         <input
                           type="text"
                           required
@@ -995,41 +1031,41 @@ export default function PublicCensoPage() {
                           value={v.placa}
                           onChange={(e) => actualizarVehiculo(idx, 'placa', e.target.value.toUpperCase())}
                           placeholder="ABC123 o ABC12D"
-                          className="input input-xs w-full font-mono uppercase"
+                          className="input input-sm w-full font-medium font-mono uppercase"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Marca / Modelo</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Marca / Modelo</label>
                         <input
                           type="text"
                           value={v.marca}
                           onChange={(e) => actualizarVehiculo(idx, 'marca', e.target.value)}
                           placeholder="Ej. Chevrolet Spark"
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                       </div>
                       <div>
-                        <label className="label label-text text-2xs font-semibold">Color</label>
+                        <label className="label label-text text-sm font-bold text-base-content">Color</label>
                         <input
                           type="text"
                           value={v.color}
                           onChange={(e) => actualizarVehiculo(idx, 'color', e.target.value)}
                           placeholder="Blanco"
-                          className="input input-xs w-full"
+                          className="input input-sm w-full font-medium"
                         />
                       </div>
                     </div>
 
                     <div className="pt-1">
-                      <label className="flex items-center gap-1.5 text-2xs cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer select-none font-medium">
                         <input
                           type="checkbox"
                           checked={v.parqueaEnEdificio}
                           onChange={(e) => actualizarVehiculo(idx, 'parqueaEnEdificio', e.target.checked)}
-                          className="checkbox checkbox-2xs checkbox-primary"
+                          className="checkbox w-5 h-5 rounded-md checkbox-primary"
                         />
                         <span>Estaciona dentro del edificio/conjunto</span>
                       </label>
@@ -1039,7 +1075,7 @@ export default function PublicCensoPage() {
                           value={v.numeroParqueadero}
                           onChange={(e) => actualizarVehiculo(idx, 'numeroParqueadero', e.target.value)}
                           placeholder="Número o lugar de parqueadero"
-                          className="input input-xs w-full mt-1.5"
+                          className="input input-sm w-full font-medium mt-1.5"
                         />
                       )}
                     </div>
@@ -1049,7 +1085,7 @@ export default function PublicCensoPage() {
                 <button
                   type="button"
                   onClick={agregarVehiculo}
-                  className="btn btn-outline btn-success btn-2xs w-full"
+                  className="btn btn-outline btn-success btn-sm w-full gap-1.5 font-semibold"
                 >
                   <span className="icon-[tabler--plus]" />
                   Agregar otro vehículo
@@ -1061,9 +1097,16 @@ export default function PublicCensoPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="btn btn-primary w-full btn-md shadow-md"
+            className="btn btn-primary w-full btn-sm text-base font-bold gap-2 shadow-sm"
           >
-            {submitting ? 'Enviando...' : 'Enviar Ficha Censal'}
+            {submitting ? (
+              <span className="loading loading-spinner"></span>
+            ) : (
+              <>
+                <span className="icon-[tabler--send] text-lg" />
+                <span>Enviar Ficha Censal</span>
+              </>
+            )}
           </button>
         </form>
       </div>

@@ -5,6 +5,9 @@ import { apiFetch, API_URL } from '@/lib/api';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import QRCode from 'qrcode';
+import Paginacion from '@/components/Paginacion';
+import BarraBusquedaFiltros from '@/components/BarraBusquedaFiltros';
+import BotoneraAccionesTabla from '@/components/BotoneraAccionesTabla';
 
 interface Inmueble {
   _id: string;
@@ -42,11 +45,27 @@ export default function InmueblesPage() {
   const { edificio } = useAuth();
   const [todosInmuebles, setTodosInmuebles] = useState<Inmueble[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchInmueble, setSearchInmueble] = useState('');
+  const [ordenInmuebles, setOrdenInmuebles] = useState('recientes');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroTrans, setFiltroTrans] = useState('');
+  const [filtroEstadoInmuebles, setFiltroEstadoInmuebles] = useState('');
+  const [drawerFiltros, setDrawerFiltros] = useState(false);
+  const [vistaInmuebles, setVistaInmuebles] = useState<'tabla' | 'tarjetas'>('tarjetas');
+  const [pageInmuebles, setPageInmuebles] = useState(1);
+  const [itemsPerPageInmuebles, setItemsPerPageInmuebles] = useState(10);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vista_inmuebles') as 'tabla' | 'tarjetas' | null;
+      if (saved === 'tabla' || saved === 'tarjetas') {
+        setVistaInmuebles(saved);
+      }
+    }
+  }, []);
 
   const publicUrl = typeof window !== 'undefined' && edificio?.id
     ? `${window.location.origin}/inmuebles/${edificio.id}`
@@ -105,12 +124,48 @@ export default function InmueblesPage() {
   }, [todosInmuebles]);
 
   const inmueblesFiltrados = useMemo(() => {
-    return todosInmuebles.filter((item) => {
+    const filtrados = todosInmuebles.filter((item) => {
       if (filtroTipo && item.tipo !== filtroTipo) return false;
       if (filtroTrans && item.transaccion !== filtroTrans) return false;
+      if (filtroEstadoInmuebles && item.estado !== filtroEstadoInmuebles) return false;
+      if (searchInmueble.trim()) {
+        const term = searchInmueble.trim().toLowerCase();
+        const matchObs = item.observacion?.toLowerCase().includes(term);
+        const matchTel = item.telefono?.toLowerCase().includes(term);
+        const matchApto = item.numeroApto?.toLowerCase().includes(term);
+        const matchTorre = item.torre?.toLowerCase().includes(term);
+        const matchId = item.identificador?.toLowerCase().includes(term);
+        const matchRef = item.itemAsignadoRef?.toLowerCase().includes(term);
+        if (!matchObs && !matchTel && !matchApto && !matchTorre && !matchId && !matchRef) return false;
+      }
       return true;
     });
-  }, [todosInmuebles, filtroTipo, filtroTrans]);
+
+    filtrados.sort((a, b) => {
+      switch (ordenInmuebles) {
+        case 'precio_asc':
+          return (a.precio || 0) - (b.precio || 0);
+        case 'precio_desc':
+          return (b.precio || 0) - (a.precio || 0);
+        case 'antiguos':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'recientes':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+    return filtrados;
+  }, [todosInmuebles, filtroTipo, filtroTrans, filtroEstadoInmuebles, searchInmueble, ordenInmuebles]);
+
+  const inmueblesPaginados = useMemo(() => {
+    const start = (pageInmuebles - 1) * itemsPerPageInmuebles;
+    return inmueblesFiltrados.slice(start, start + itemsPerPageInmuebles);
+  }, [inmueblesFiltrados, pageInmuebles, itemsPerPageInmuebles]);
+
+  const totalFiltrosActivos = useMemo(() => {
+    return [Boolean(filtroTipo), Boolean(filtroTrans), Boolean(filtroEstadoInmuebles)].filter(Boolean).length;
+  }, [filtroTipo, filtroTrans, filtroEstadoInmuebles]);
 
   const eliminar = async (id: string) => {
     if (!confirm('¿Eliminar esta publicación?')) return;
@@ -308,33 +363,101 @@ export default function InmueblesPage() {
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="bg-base-100 p-3.5 rounded-box shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Barra de Búsqueda y Filtros Compartida (Fila única + Drawer + Toggle Vista) */}
+      <BarraBusquedaFiltros
+        busqueda={searchInmueble}
+        onBusquedaChange={(val) => {
+          setSearchInmueble(val);
+          setPageInmuebles(1);
+        }}
+        placeholderBusqueda="Buscar por apartamento, torre, teléfono o descripción..."
+        orden={ordenInmuebles}
+        onOrdenChange={(val) => {
+          setOrdenInmuebles(val);
+          setPageInmuebles(1);
+        }}
+        opcionesOrden={[
+          { valor: 'recientes', etiqueta: 'Orden: Más recientes' },
+          { valor: 'antiguos', etiqueta: 'Orden: Más antiguos' },
+          { valor: 'precio_asc', etiqueta: 'Orden: Menor precio' },
+          { valor: 'precio_desc', etiqueta: 'Orden: Mayor precio' },
+        ]}
+        labelOrden="Criterio de orden de publicaciones"
+        vista={vistaInmuebles}
+        onVistaChange={(v) => {
+          setVistaInmuebles(v);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('vista_inmuebles', v);
+          }
+        }}
+        drawerFiltrosAbierto={drawerFiltros}
+        onToggleDrawerFiltros={() => setDrawerFiltros((prev) => !prev)}
+        filtrosActivosCount={totalFiltrosActivos}
+        tituloFiltros="Filtros de publicaciones"
+        onLimpiarFiltros={() => {
+          setFiltroTipo('');
+          setFiltroTrans('');
+          setFiltroEstadoInmuebles('');
+          setPageInmuebles(1);
+        }}
+      >
+        <div>
+          <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+            Tipo de Propiedad
+          </label>
           <select
-            className="select select-bordered select-sm w-full sm:w-auto text-xs"
+            className="select select-sm w-full text-xs"
             value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
+            onChange={(e) => {
+              setFiltroTipo(e.target.value);
+              setPageInmuebles(1);
+            }}
           >
             <option value="">Todos los tipos</option>
-            <option value="inmueble">Inmueble</option>
+            <option value="inmueble">Inmueble / Apartamento</option>
             <option value="parqueadero">Parqueadero</option>
             <option value="habitacion">Habitación</option>
           </select>
+        </div>
+
+        <div>
+          <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+            Transacción
+          </label>
           <select
-            className="select select-bordered select-sm w-full sm:w-auto text-xs"
+            className="select select-sm w-full text-xs"
             value={filtroTrans}
-            onChange={(e) => setFiltroTrans(e.target.value)}
+            onChange={(e) => {
+              setFiltroTrans(e.target.value);
+              setPageInmuebles(1);
+            }}
           >
-            <option value="">Venta / Arriendo</option>
+            <option value="">Todas las transacciones</option>
             <option value="venta">Venta</option>
             <option value="arriendo">Arriendo</option>
           </select>
         </div>
-        <div className="text-xs text-base-content/60 text-right sm:text-left">
-          {inmueblesFiltrados.length} {inmueblesFiltrados.length === 1 ? 'publicación' : 'publicaciones'}
+
+        <div>
+          <label className="text-3xs uppercase font-bold text-base-content/50 block mb-1">
+            Estado de la Oferta
+          </label>
+          <select
+            className="select select-sm w-full text-xs"
+            value={filtroEstadoInmuebles}
+            onChange={(e) => {
+              setFiltroEstadoInmuebles(e.target.value);
+              setPageInmuebles(1);
+            }}
+          >
+            <option value="">Todos los estados</option>
+            <option value="activa">Activa</option>
+            <option value="pausada">Pausada</option>
+            <option value="vendida">Vendida</option>
+            <option value="arrendada">Arrendada</option>
+          </select>
         </div>
-      </div>
+      </BarraBusquedaFiltros>
 
       {/* Listado */}
       {loading ? (
@@ -353,117 +476,203 @@ export default function InmueblesPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {inmueblesFiltrados.map((item) => (
-            <div
-              key={item._id}
-              className="card bg-base-100 shadow-sm hover:shadow-md transition-all duration-200 border border-base-200 flex flex-col overflow-hidden"
-            >
-              {/* Thumbnail */}
-              <div className="relative w-full h-44 sm:h-48 bg-base-200 overflow-hidden">
-                {item.imagenes[0] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={getImageUrl(item.imagenes[0])}
-                    alt={item.tipo}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-base-content/30">
-                    <span className="icon-[tabler--photo] text-5xl" aria-hidden="true" />
-                    <span className="text-xs mt-1">Sin fotografía</span>
-                  </div>
-                )}
-                {/* Badges superpuestos */}
-                <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
-                  <span className={`badge badge-sm font-semibold shadow-xs ${tipoBadge(item.tipo)}`}>
-                    {item.tipo}
-                  </span>
-                  <span className="badge badge-sm badge-neutral font-semibold shadow-xs">
-                    {item.transaccion}
-                  </span>
-                  <span
-                    className={`badge badge-sm ${item.estado === 'activa' ? 'badge-success' : 'badge-error'}`}
-                  >
-                    {item.estado}
-                  </span>
-                </div>
-              </div>
-
-              {/* Contenido Card */}
-              <div className="card-body p-4 sm:p-5 flex flex-col flex-1 justify-between gap-3">
-                <div>
-                  <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                    <h3 className="card-title text-lg font-bold text-primary">
-                      ${item.precio.toLocaleString('es-CO')}
-                    </h3>
-                    <span className="text-xs text-base-content/60">COP</span>
-                  </div>
-
-                  {(item.identificador || item.numeroApto) && (
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-base-content/90 mb-1.5 flex-wrap">
-                      <span className="icon-[tabler--door] text-sm text-primary" />
-                      <span>{item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto}`}</span>
-                      {item.itemAsignadoRef && (
-                        <span className="badge badge-outline badge-xs">{item.itemAsignadoRef}</span>
-                      )}
-                      {item.censoUnidadId && (
-                        <Link
-                          href={`/dashboard/censo/${typeof item.censoUnidadId === 'object' ? item.censoUnidadId._id : item.censoUnidadId}`}
-                          className="badge badge-success badge-xs gap-0.5 hover:opacity-80"
-                          title="Ver ficha de censo de la unidad"
-                        >
-                          <span className="icon-[tabler--check] text-[10px]" /> Censo
-                        </Link>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-1.5 text-xs text-base-content/70 mb-2">
-                    {item.metrosCuadrados && (
-                      <span className="badge badge-neutral badge-xs">
-                        {item.metrosCuadrados} m²
-                      </span>
-                    )}
-                    {item.piso !== undefined && (
-                      <span className="badge badge-neutral badge-xs">
-                        Piso {item.piso}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 text-xs text-base-content/70 mb-2">
-                    <span className="icon-[tabler--phone] text-primary" aria-hidden="true" />
-                    <span>{item.telefono}</span>
-                  </div>
-
-                  {item.observacion && (
-                    <p className="text-xs text-base-content/70 line-clamp-2 leading-relaxed">
-                      {item.observacion}
-                    </p>
-                  )}
-                </div>
-
-                {/* Acciones */}
-                <div className="pt-3 border-t border-base-200 flex items-center justify-end gap-2">
-                  <Link
-                    href={`/dashboard/inmuebles/${item._id}/edit`}
-                    className="btn btn-outline btn-sm gap-1"
-                  >
-                    <span className="icon-[tabler--edit] text-base" aria-hidden="true" />
-                    Editar
-                  </Link>
-                  <button
-                    onClick={() => eliminar(item._id)}
-                    className="btn btn-outline btn-error btn-sm gap-1"
-                  >
-                    <span className="icon-[tabler--trash] text-base" aria-hidden="true" />
-                    Eliminar
-                  </button>
-                </div>
+        <div className="space-y-4">
+          {vistaInmuebles === 'tabla' ? (
+            <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Inmueble / Unidad</th>
+                      <th>Operación y Tipo</th>
+                      <th>Precio (COP)</th>
+                      <th>Área</th>
+                      <th>Contacto</th>
+                      <th>Estado</th>
+                      <th className="text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inmueblesPaginados.map((item) => (
+                      <tr key={item._id}>
+                        <td>
+                          <div className="font-bold text-base-content flex items-center gap-1.5">
+                            {item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto || '-'}`}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-2xs text-base-content/60 mt-0.5">
+                            {item.itemAsignadoRef && <span>Ref: {item.itemAsignadoRef}</span>}
+                            {item.piso !== undefined && <span>• Piso {item.piso}</span>}
+                            {item.censoUnidadId && (
+                              <Link
+                                href={`/dashboard/censo/${typeof item.censoUnidadId === 'object' ? item.censoUnidadId._id : item.censoUnidadId}`}
+                                className="badge badge-success badge-2xs gap-0.5 hover:opacity-80"
+                                title="Ver censo"
+                              >
+                                <span className="icon-[tabler--check] text-[10px]" /> Censo
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <span className={`badge badge-xs font-semibold ${tipoBadge(item.tipo)}`}>
+                              {item.tipo}
+                            </span>
+                            <span className="badge badge-xs badge-neutral font-semibold">
+                              {item.transaccion}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="font-bold text-primary text-sm">
+                            ${item.precio.toLocaleString('es-CO')}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="text-xs text-base-content/70">
+                            {item.metrosCuadrados ? `${item.metrosCuadrados} m²` : '-'}
+                          </div>
+                        </td>
+                        <td>
+                          <a href={`tel:${item.telefono}`} className="text-xs font-mono text-base-content/80 hover:text-primary inline-flex items-center gap-1">
+                            <span className="icon-[tabler--phone] text-xs text-primary" />
+                            {item.telefono}
+                          </a>
+                        </td>
+                        <td>
+                          <span className={`badge badge-xs font-semibold ${item.estado === 'activa' ? 'badge-success' : 'badge-error'}`}>
+                            {item.estado}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <BotoneraAccionesTabla
+                            editarUrl={`/dashboard/inmuebles/${item._id}/edit`}
+                            tituloEditar="Editar publicación"
+                            onEliminar={() => eliminar(item._id)}
+                            tituloEliminar="Eliminar publicación"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {inmueblesPaginados.map((item) => (
+                <div
+                  key={item._id}
+                  className="card bg-base-100 shadow-sm hover:shadow-md transition-all duration-200 border border-base-200 flex flex-col overflow-hidden"
+                >
+                  {/* Thumbnail */}
+                  <div className="relative w-full h-44 sm:h-48 bg-base-200 overflow-hidden">
+                    {item.imagenes[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={getImageUrl(item.imagenes[0])}
+                        alt={item.tipo}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-base-content/30">
+                        <span className="icon-[tabler--photo] text-5xl" aria-hidden="true" />
+                        <span className="text-xs mt-1">Sin fotografía</span>
+                      </div>
+                    )}
+                    {/* Badges superpuestos */}
+                    <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
+                      <span className={`badge badge-sm font-semibold shadow-xs ${tipoBadge(item.tipo)}`}>
+                        {item.tipo}
+                      </span>
+                      <span className="badge badge-sm badge-neutral font-semibold shadow-xs">
+                        {item.transaccion}
+                      </span>
+                      <span
+                        className={`badge badge-sm ${item.estado === 'activa' ? 'badge-success' : 'badge-error'}`}
+                      >
+                        {item.estado}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Contenido Card */}
+                  <div className="card-body p-4 sm:p-5 flex flex-col flex-1 justify-between gap-3">
+                    <div>
+                      <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                        <h3 className="card-title text-lg font-bold text-primary">
+                          ${item.precio.toLocaleString('es-CO')}
+                        </h3>
+                        <span className="text-xs text-base-content/60">COP</span>
+                      </div>
+
+                      {(item.identificador || item.numeroApto) && (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-base-content/90 mb-1.5 flex-wrap">
+                          <span className="icon-[tabler--door] text-sm text-primary" />
+                          <span>{item.identificador || `${item.torre ? item.torre + ' - ' : ''}Apto ${item.numeroApto}`}</span>
+                          {item.itemAsignadoRef && (
+                            <span className="badge badge-outline badge-xs">{item.itemAsignadoRef}</span>
+                          )}
+                          {item.censoUnidadId && (
+                            <Link
+                              href={`/dashboard/censo/${typeof item.censoUnidadId === 'object' ? item.censoUnidadId._id : item.censoUnidadId}`}
+                              className="badge badge-success badge-xs gap-0.5 hover:opacity-80"
+                              title="Ver ficha de censo de la unidad"
+                            >
+                              <span className="icon-[tabler--check] text-[10px]" /> Censo
+                            </Link>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-1.5 text-xs text-base-content/70 mb-2">
+                        {item.metrosCuadrados && (
+                          <span className="badge badge-neutral badge-xs">
+                            {item.metrosCuadrados} m²
+                          </span>
+                        )}
+                        {item.piso !== undefined && (
+                          <span className="badge badge-neutral badge-xs">
+                            Piso {item.piso}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-xs text-base-content/70 mb-2">
+                        <span className="icon-[tabler--phone] text-primary" aria-hidden="true" />
+                        <span>{item.telefono}</span>
+                      </div>
+
+                      {item.observacion && (
+                        <p className="text-xs text-base-content/70 line-clamp-2 leading-relaxed">
+                          {item.observacion}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Acciones */}
+                    <div className="pt-3 border-t border-base-200">
+                      <BotoneraAccionesTabla
+                        editarUrl={`/dashboard/inmuebles/${item._id}/edit`}
+                        tituloEditar="Editar publicación"
+                        onEliminar={() => eliminar(item._id)}
+                        tituloEliminar="Eliminar publicación"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Paginacion
+            currentPage={pageInmuebles}
+            totalItems={inmueblesFiltrados.length}
+            itemsPerPage={itemsPerPageInmuebles}
+            onPageChange={setPageInmuebles}
+            onItemsPerPageChange={setItemsPerPageInmuebles}
+            className="rounded-box shadow-sm border border-base-200"
+          />
         </div>
       )}
     </div>

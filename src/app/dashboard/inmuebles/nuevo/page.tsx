@@ -210,7 +210,7 @@ export default function NuevoInmueblePage() {
         {!cargandoCenso && unidadesCenso.length > 0 ? (
           <div className="bg-primary/5 border border-primary/20 rounded-box p-3.5 sm:p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="icon-[tabler--database-check] text-primary text-lg" />
+              <span className="icon-[tabler--database] text-primary text-lg" />
               <span className="text-xs sm:text-sm font-semibold text-primary">
                 Vinculación con Censo de Inmuebles Registrados
               </span>
