@@ -96,7 +96,7 @@ export default function InmueblesPage() {
 
   const cargar = () => {
     if (!edificio) return;
-    apiFetch(`/inmuebles?edificioId=${edificio.id}`)
+    apiFetch(`/inmuebles?edificioId=${edificio.id}&estado=todos`)
       .then((data) => {
         setTodosInmuebles(Array.isArray(data) ? data : []);
       })

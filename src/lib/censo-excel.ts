@@ -38,7 +38,7 @@ export interface ImportarResidenteItem {
   documento?: string;
   condicion: string;
   esContactoPrincipal?: boolean;
-  fechaNacimiento: string;
+  fechaNacimiento?: string;
   telefono?: string;
   email?: string;
 }
@@ -95,6 +95,8 @@ export type CampoCensoDestino =
   | 'coeficiente'
   | 'nombrePropietario'
   | 'residentes'
+  | 'documento'
+  | 'fechaNacimiento'
   | 'email'
   | 'telefono'
   | 'tipoOcupacion'
@@ -124,6 +126,8 @@ export interface PersonaPreviewItem {
   nombreCompleto: string;
   condicion: 'propietario' | 'arrendatario' | 'conviviente';
   esContactoPrincipal: boolean;
+  documento?: string;
+  fechaNacimiento?: string;
   email?: string;
   telefono?: string;
 }
@@ -398,6 +402,20 @@ export function sugerirMapeoColumnas(columnas: string[]): Record<string, CampoCe
       return;
     }
 
+    // 12. Documento / Cédula
+    if (!assignedTargets.has('documento') && matches(colTrimmed, ['documento', 'cedula', 'identificacion', 'cc', 'nit'])) {
+      mapeo[colTrimmed] = 'documento';
+      assignedTargets.add('documento');
+      return;
+    }
+
+    // 13. Fecha de Nacimiento
+    if (!assignedTargets.has('fechaNacimiento') && matches(colTrimmed, ['fechanacimiento', 'nacimiento', 'fechanac', 'cumpleanos'])) {
+      mapeo[colTrimmed] = 'fechaNacimiento';
+      assignedTargets.add('fechaNacimiento');
+      return;
+    }
+
     mapeo[colTrimmed] = 'ignorar';
   });
 
@@ -472,9 +490,29 @@ export function transformarHojaExcel(
 
     const tipoOcupacion: 'habitada' | 'desocupada' = isDesocupado ? 'desocupada' : 'habitada';
 
-    // 5. Extracción de Correos y Teléfonos
+    // 5. Extracción de Correos, Teléfonos, Documento y Fecha de Nacimiento
     const emailsExtraidos = cleanEmails(getMappedVal('email'));
     const telefonosExtraidos = cleanPhones(getMappedVal('telefono'));
+    const rawDocumento = String(getMappedVal('documento') || '').trim() || undefined;
+    const rawFechaNacVal = getMappedVal('fechaNacimiento');
+    let fechaNacExtraida: string | undefined = undefined;
+    if (rawFechaNacVal instanceof Date) {
+      fechaNacExtraida = rawFechaNacVal.toISOString().split('T')[0];
+    } else if (typeof rawFechaNacVal === 'number') {
+      const parsedDate = XLSX.SSF.parse_date_code(rawFechaNacVal);
+      if (parsedDate) {
+        fechaNacExtraida = `${parsedDate.y}-${String(parsedDate.m).padStart(2, '0')}-${String(parsedDate.d).padStart(2, '0')}`;
+      }
+    } else if (typeof rawFechaNacVal === 'string' && rawFechaNacVal.trim()) {
+      const trimmed = rawFechaNacVal.trim();
+      const matchDMY = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (matchDMY) {
+        const [, d, mStr, y] = matchDMY;
+        fechaNacExtraida = `${y}-${mStr.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      } else {
+        fechaNacExtraida = trimmed;
+      }
+    }
 
     // 6. Desdoblamiento de Personas (Propietarios + Residentes)
     const rawPropietarioText = String(getMappedVal('nombrePropietario') || '');
@@ -496,6 +534,8 @@ export function transformarHojaExcel(
           nombreCompleto: n,
           condicion: 'propietario',
           esContactoPrincipal: i === 0,
+          documento: i === 0 ? rawDocumento : undefined,
+          fechaNacimiento: i === 0 ? fechaNacExtraida : undefined,
           email: emailsExtraidos[emailIdx++] || undefined,
           telefono: telefonosExtraidos[telIdx++] || undefined,
         });
@@ -507,10 +547,13 @@ export function transformarHojaExcel(
       const key = n.toLowerCase();
       if (!addedNames.has(key)) {
         addedNames.add(key);
+        const isFirst = personas.length === 0;
         personas.push({
           nombreCompleto: n,
           condicion: 'conviviente',
-          esContactoPrincipal: personas.length === 0,
+          esContactoPrincipal: isFirst,
+          documento: isFirst ? rawDocumento : undefined,
+          fechaNacimiento: isFirst ? fechaNacExtraida : undefined,
           email: emailsExtraidos[emailIdx++] || undefined,
           telefono: telefonosExtraidos[telIdx++] || undefined,
         });
@@ -523,6 +566,8 @@ export function transformarHojaExcel(
         nombreCompleto: `Residente Apto ${rawApto}`,
         condicion: 'conviviente',
         esContactoPrincipal: true,
+        documento: rawDocumento,
+        fechaNacimiento: fechaNacExtraida,
         email: emailsExtraidos[0],
         telefono: telefonosExtraidos[0],
       });
@@ -534,9 +579,10 @@ export function transformarHojaExcel(
         torre: torre || undefined,
         apto: rawApto,
         nombreCompleto: p.nombreCompleto,
+        documento: p.documento,
         condicion: p.condicion,
         esContactoPrincipal: p.esContactoPrincipal,
-        fechaNacimiento: '1990-01-01',
+        fechaNacimiento: p.fechaNacimiento,
         email: p.email,
         telefono: p.telefono,
       });
@@ -908,7 +954,7 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
         documento: documento || undefined,
         condicion,
         esContactoPrincipal,
-        fechaNacimiento: fechaNacimiento || '1990-01-01',
+        fechaNacimiento: fechaNacimiento || undefined,
         telefono: telefono || undefined,
         email: email || undefined,
       });

@@ -70,6 +70,7 @@ export default function InvitacionCensoTokenPage({
   const [submitting, setSubmitting] = useState(false);
   const [enviadoExitoso, setEnviadoExitoso] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [inmueblePredefinido, setInmueblePredefinido] = useState<string>('');
 
   // Catálogo de unidades del edificio
   const [catalogo, setCatalogo] = useState<CatalogoUnidadItem[]>([]);
@@ -115,6 +116,20 @@ export default function InvitacionCensoTokenPage({
     apiFetch(`/censo/public/invitacion/${token}`)
       .then((inv) => {
         setTokenValido(true);
+        if (inv.inmueblePredefinido) {
+          const predef = String(inv.inmueblePredefinido).trim();
+          setInmueblePredefinido(predef);
+          setIdentificador(predef);
+
+          // Inferir torre y apto si es posible para mantener coherencia en el payload
+          const matchTorreApto = predef.match(/Torre\s*([^\-]+?)\s*-\s*Apto\s*(.+)/i) || predef.match(/Torre\s*([^\s]+)\s*(.+)/i);
+          if (matchTorreApto) {
+            setTorre(`Torre ${matchTorreApto[1].trim()}`);
+            setNumeroApto(matchTorreApto[2].trim());
+          } else if (predef.toLowerCase().startsWith('apto')) {
+            setNumeroApto(predef.replace(/apto/i, '').trim());
+          }
+        }
         if (inv.expiraEn) {
           setExpiraEn(new Date(inv.expiraEn).toLocaleDateString('es-CO', {
             year: 'numeric',
@@ -130,7 +145,23 @@ export default function InvitacionCensoTokenPage({
         if (edifId) {
           apiFetch(`/censo/public/${edifId}/unidades`)
             .then((data) => {
-              if (Array.isArray(data)) setCatalogo(data);
+              if (Array.isArray(data)) {
+                setCatalogo(data);
+                if (inv.inmueblePredefinido) {
+                  const predefNorm = String(inv.inmueblePredefinido).trim().toLowerCase();
+                  const match = data.find(
+                    (u: any) =>
+                      u.identificador?.trim().toLowerCase() === predefNorm ||
+                      (u.torre && u.numeroApto && `${u.torre} - Apto ${u.numeroApto}`.toLowerCase() === predefNorm) ||
+                      (u.torre && u.numeroApto && `${u.torre} - ${u.numeroApto}`.toLowerCase() === predefNorm)
+                  );
+                  if (match) {
+                    setSelectedUnidadId(match._id);
+                    if (match.torre) setTorre(match.torre);
+                    if (match.numeroApto) setNumeroApto(match.numeroApto);
+                  }
+                }
+              }
             })
             .catch(() => {});
           apiFetch(`/censo/public/${edifId}/parqueaderos`)
@@ -315,8 +346,8 @@ export default function InvitacionCensoTokenPage({
     e.preventDefault();
     setErrorMsg('');
 
-    let identCalculado = identificador.trim();
-    if (!modoManual && selectedUnidadId) {
+    let identCalculado = inmueblePredefinido || identificador.trim();
+    if (!inmueblePredefinido && !modoManual && selectedUnidadId) {
       const encontrada = catalogo.find((u) => u._id === selectedUnidadId);
       if (encontrada) identCalculado = encontrada.identificador;
     }
@@ -465,7 +496,18 @@ export default function InvitacionCensoTokenPage({
               1. Identificación del Inmueble
             </h2>
 
-            {catalogo.length > 0 && !modoManual ? (
+            {inmueblePredefinido ? (
+              <div className="alert alert-info text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="icon-[tabler--lock] text-base shrink-0" />
+                  <div>
+                    <span className="font-bold">Unidad Asignada:</span> {inmueblePredefinido}
+                    <p className="text-2xs opacity-80">Este enlace está vinculado exclusivamente a este apartamento por la administración.</p>
+                  </div>
+                </div>
+                <span className="badge badge-sm badge-neutral">Bloqueado</span>
+              </div>
+            ) : catalogo.length > 0 && !modoManual ? (
               <div className="space-y-3">
                 {torresDisponibles.length > 0 && (
                   <label className="form-control">

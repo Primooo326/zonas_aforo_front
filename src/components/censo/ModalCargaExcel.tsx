@@ -6,8 +6,10 @@ import {
   descargarPlantillaExcel,
   descargarPlantillaCompletaExcel,
   analizarLibroExcel,
+  parsearExcelCenso,
   sugerirMapeoColumnas,
   transformarHojaExcel,
+  normalizarTorre,
   LibroExcelAnalizado,
   CampoCensoDestino,
   FilaSanitizadaPreview,
@@ -30,6 +32,8 @@ const DESTINOS_OPCIONES: { valor: CampoCensoDestino; etiqueta: string; descripci
   { valor: 'coeficiente', etiqueta: '📊 Coeficiente de Copropiedad', descripcion: 'Porcentaje o alícuota de copropiedad' },
   { valor: 'nombrePropietario', etiqueta: '👤 Nombre del Propietario', descripcion: 'Titular o propietario del inmueble' },
   { valor: 'residentes', etiqueta: '👥 Residentes / Convivientes', descripcion: 'Nombres de las personas que habitan la unidad' },
+  { valor: 'documento', etiqueta: '🪪 Documento / Cédula', descripcion: 'Documento de identidad del titular' },
+  { valor: 'fechaNacimiento', etiqueta: '🎂 Fecha de Nacimiento', descripcion: 'Fecha de nacimiento del residente' },
   { valor: 'email', etiqueta: '✉️ Correo(s) Electrónico(s)', descripcion: 'Emails de contacto' },
   { valor: 'telefono', etiqueta: '📞 Teléfono(s) / Celular(es)', descripcion: 'Teléfonos de contacto' },
   { valor: 'tipoOcupacion', etiqueta: '🚪 Estado de Ocupación', descripcion: 'Habitada o desocupada' },
@@ -52,6 +56,7 @@ export default function ModalCargaExcel({
 
   // Paso 1: Libro analizado y hoja seleccionada
   const [libro, setLibro] = useState<LibroExcelAnalizado | null>(null);
+  const [multiSheetData, setMultiSheetData] = useState<ParsedCensoExcel | null>(null);
   const [hojaSeleccionada, setHojaSeleccionada] = useState<string>('');
   const [rawRows, setRawRows] = useState<Record<string, unknown>[]>([]);
 
@@ -81,6 +86,7 @@ export default function ModalCargaExcel({
     setPaso(1);
     setFile(null);
     setLibro(null);
+    setMultiSheetData(null);
     setHojaSeleccionada('');
     setRawRows([]);
     setColumnasHoja([]);
@@ -121,8 +127,12 @@ export default function ModalCargaExcel({
     setLoading(true);
 
     try {
-      const libroAnalizado = await analizarLibroExcel(f);
+      const [libroAnalizado, parsedMulti] = await Promise.all([
+        analizarLibroExcel(f),
+        parsearExcelCenso(f).catch(() => null),
+      ]);
       setLibro(libroAnalizado);
+      setMultiSheetData(parsedMulti);
 
       const hojaInicial = libroAnalizado.hojaRecomendada || libroAnalizado.hojas[0]?.nombre || '';
       setHojaSeleccionada(hojaInicial);
@@ -185,9 +195,104 @@ export default function ModalCargaExcel({
     setErrorGlobal('');
     // Ejecutar pipeline de sanitización heurística y desdoblamiento
     const transformacion = transformarHojaExcel(rawRows, mapeo);
-    setFilasPreview(transformacion.filasPreview);
-    setAdvertenciasSanitizacion(transformacion.advertencias);
-    setParsedDataFinal(transformacion.parsedData);
+
+    // Si el libro es plantilla multi-hoja y contiene hojas adicionales (Residentes, Parqueaderos, Bodegas, Mascotas, Vehiculos),
+    // enriquecer la vista previa y el payload final con dichos datos.
+    const extraResidentes = multiSheetData?.residentes ?? [];
+    const extraParqueaderos = multiSheetData?.parqueaderos ?? [];
+    const extraBodegas = multiSheetData?.bodegas ?? [];
+    const extraMascotas = multiSheetData?.mascotas ?? [];
+    const extraVehiculos = multiSheetData?.vehiculos ?? [];
+
+    const filasEnriquecidas = transformacion.filasPreview.map((fila) => {
+      const claveUnidad = `${normalizarTorre(fila.torre).toLowerCase()}_${fila.numeroApto.trim().toLowerCase()}`;
+      const idLegible = fila.torre ? `${normalizarTorre(fila.torre)} - Apto ${fila.numeroApto.trim()}`.toLowerCase() : `apto ${fila.numeroApto.trim()}`.toLowerCase();
+
+      const residentesDeHoja = extraResidentes.filter((r) => {
+        const rKey = `${normalizarTorre(r.torre).toLowerCase()}_${(r.apto || '').trim().toLowerCase()}`;
+        const rId = (r.identificador || '').trim().toLowerCase();
+        return rKey === claveUnidad || (rId && rId === idLegible);
+      });
+
+      if (residentesDeHoja.length === 0) return fila;
+
+      const personasCombinadas = [...fila.personas];
+      const emailsSet = new Set(fila.emailsExtraidos);
+      const telsSet = new Set(fila.telefonosExtraidos);
+
+      residentesDeHoja.forEach((r) => {
+        const condNorm: 'propietario' | 'arrendatario' | 'conviviente' = r.condicion?.toLowerCase().includes('prop')
+          ? 'propietario'
+          : r.condicion?.toLowerCase().includes('arrend')
+            ? 'arrendatario'
+            : 'conviviente';
+        const yaExiste = personasCombinadas.some(
+          (p) => p.nombreCompleto.trim().toLowerCase() === r.nombreCompleto.trim().toLowerCase(),
+        );
+        if (!yaExiste) {
+          personasCombinadas.push({
+            nombreCompleto: r.nombreCompleto,
+            condicion: condNorm,
+            esContactoPrincipal: Boolean(r.esContactoPrincipal),
+            documento: r.documento,
+            fechaNacimiento: r.fechaNacimiento,
+            email: r.email,
+            telefono: r.telefono,
+          });
+        }
+        if (r.email) emailsSet.add(r.email);
+        if (r.telefono) telsSet.add(r.telefono);
+      });
+
+      const emailsFinales = Array.from(emailsSet);
+      const telsFinales = Array.from(telsSet);
+
+      return {
+        ...fila,
+        personas: personasCombinadas,
+        emailsExtraidos: emailsFinales,
+        telefonosExtraidos: telsFinales,
+        estadoValidacion: fila.numeroApto ? ('valido' as const) : fila.estadoValidacion,
+        mensajeValidacion: fila.numeroApto ? '' : fila.mensajeValidacion,
+      };
+    });
+
+    const residentesCombinados = filasEnriquecidas.flatMap((f) =>
+      f.personas.map((p) => ({
+        torre: f.torre,
+        apto: f.numeroApto,
+        nombreCompleto: p.nombreCompleto,
+        documento: p.documento,
+        condicion: p.condicion,
+        esContactoPrincipal: p.esContactoPrincipal,
+        fechaNacimiento: p.fechaNacimiento,
+        telefono: p.telefono,
+        email: p.email,
+      })),
+    );
+
+    const parsedEnriquecido: ParsedCensoExcel = {
+      ...transformacion.parsedData,
+      parqueaderos: extraParqueaderos,
+      bodegas: extraBodegas,
+      residentes: residentesCombinados,
+      mascotas: extraMascotas,
+      vehiculos: extraVehiculos,
+      estadisticas: {
+        ...transformacion.parsedData.estadisticas,
+        totalParqueaderos: extraParqueaderos.length,
+        parqueaderosPrivados: extraParqueaderos.filter((p) => !p.esVisitante).length,
+        parqueaderosVisitantes: extraParqueaderos.filter((p) => p.esVisitante).length,
+        totalBodegas: extraBodegas.length,
+        totalResidentes: residentesCombinados.length,
+        totalMascotas: extraMascotas.length,
+        totalVehiculos: extraVehiculos.length,
+      },
+    };
+
+    setFilasPreview(filasEnriquecidas);
+    setAdvertenciasSanitizacion([...transformacion.advertencias, ...(multiSheetData?.advertencias ?? [])]);
+    setParsedDataFinal(parsedEnriquecido);
     setPaso(3);
   };
 
@@ -225,15 +330,27 @@ export default function ModalCargaExcel({
     setErrorGlobal('');
 
     try {
+      // Mapa de atributos físicos adicionales provenientes de la hoja o plantilla oficial
+      const fisicosMap = new Map<string, (typeof parsedDataFinal.inmuebles)[number]>();
+      for (const inm of [...(multiSheetData?.inmuebles ?? []), ...parsedDataFinal.inmuebles]) {
+        const k = `${normalizarTorre(inm.torre).toLowerCase()}_${inm.numeroApto.trim().toLowerCase()}`;
+        fisicosMap.set(k, { ...fisicosMap.get(k), ...inm });
+      }
+
       // Re-sincronizar los inmuebles y residentes con las posibles ediciones manuales en el grid
       const inmueblesActualizados = filasPreview
         .filter((f) => Boolean(f.numeroApto))
-        .map((f) => ({
-          numeroApto: f.numeroApto,
-          torre: f.torre,
-          coeficiente: f.coeficiente,
-          tipoOcupacion: f.tipoOcupacion,
-        }));
+        .map((f) => {
+          const k = `${normalizarTorre(f.torre).toLowerCase()}_${f.numeroApto.trim().toLowerCase()}`;
+          const base = fisicosMap.get(k);
+          return {
+            ...base,
+            numeroApto: f.numeroApto,
+            torre: f.torre,
+            coeficiente: f.coeficiente,
+            tipoOcupacion: f.tipoOcupacion,
+          };
+        });
 
       const residentesActualizados = filasPreview
         .filter((f) => Boolean(f.numeroApto))
@@ -242,9 +359,10 @@ export default function ModalCargaExcel({
             torre: f.torre,
             apto: f.numeroApto,
             nombreCompleto: p.nombreCompleto,
+            ...(p.documento ? { documento: p.documento } : {}),
             condicion: p.condicion,
             esContactoPrincipal: p.esContactoPrincipal,
-            fechaNacimiento: '1990-01-01',
+            ...(p.fechaNacimiento ? { fechaNacimiento: p.fechaNacimiento } : {}),
             telefono: p.telefono,
             email: p.email,
           })),
@@ -254,11 +372,11 @@ export default function ModalCargaExcel({
         method: 'POST',
         body: JSON.stringify({
           inmuebles: inmueblesActualizados,
-          parqueaderos: [],
-          bodegas: [],
+          parqueaderos: parsedDataFinal.parqueaderos ?? [],
+          bodegas: parsedDataFinal.bodegas ?? [],
           residentes: residentesActualizados,
-          mascotas: [],
-          vehiculos: [],
+          mascotas: parsedDataFinal.mascotas ?? [],
+          vehiculos: parsedDataFinal.vehiculos ?? [],
         }),
       });
 
