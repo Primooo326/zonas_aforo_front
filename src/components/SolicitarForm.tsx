@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import TimePicker from '@/components/TimePicker';
+import AforoScaleMeter from '@/components/AforoScaleMeter';
 import { API_URL } from '@/lib/api';
 
 interface Zona {
@@ -318,7 +319,7 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
   }
 
   return (
-    <div className="card bg-base-100 shadow-sm p-6 sm:p-8 max-w-lg w-full">
+    <div className="arch-panel p-6 sm:p-8 max-w-lg w-full">
       <div className="mb-6 space-y-1">
         <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-base-content flex items-center gap-2.5">
           <span className="icon-[tabler--calendar-plus] text-primary text-2xl shrink-0" />
@@ -580,11 +581,28 @@ export default function SolicitarForm({ edificioId }: { edificioId: string }) {
         )}
 
         {!checking && disponibilidad.disponible !== undefined && (
-          <div className={`alert ${disponibilidad.disponible ? 'alert-success' : 'alert-error'} text-sm font-semibold`}>
-            {disponibilidad.disponible
-              ? `Disponible (${disponibilidad.disponibles} cupos libres)`
-              : 'Aforo completo en esta franja horaria'}
-          </div>
+          zonaSel ? (
+            <div className="p-3.5 rounded-lg border arch-border bg-base-200/50">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-base-content/60 block mb-1.5">
+                Disponibilidad de la franja
+              </span>
+              <AforoScaleMeter
+                aforoActual={
+                  disponibilidad.ocupadas ??
+                  Math.max(0, zonaSel.aforoMaximo - (disponibilidad.disponibles ?? 0))
+                }
+                aforoMaximo={zonaSel.aforoMaximo}
+                mostrarEtiqueta={true}
+                tamano="md"
+              />
+            </div>
+          ) : (
+            <div className={`alert ${disponibilidad.disponible ? 'alert-success' : 'alert-error'} text-sm font-semibold`}>
+              {disponibilidad.disponible
+                ? `Disponible (${disponibilidad.disponibles} cupos libres)`
+                : 'Aforo completo en esta franja horaria'}
+            </div>
+          )
         )}
 
         <button

@@ -52,12 +52,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex h-screen flex-col lg:flex-row">
-      <nav className="navbar bg-base-100 border-b border-base-content/10 lg:hidden px-3 min-h-14">
+    <div className="flex h-screen flex-col lg:flex-row bg-base-200">
+      {/* Barra superior de navegación móvil */}
+      <nav className="navbar bg-base-100 border-b arch-border lg:hidden px-3 min-h-14">
         <div className="flex-none">
           <button
             type="button"
-            className="btn btn-ghost btn-square btn-sm"
+            className="btn btn-outline btn-square btn-sm arch-border text-base-content hover:bg-base-200 hover:text-primary"
             aria-haspopup="dialog"
             aria-expanded="false"
             aria-controls="dashboard-drawer"
@@ -68,42 +69,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
         <div className="flex-1 min-w-0 px-2 text-center">
-          <span className="truncate block text-sm sm:text-base font-semibold text-base-content">
+          <span className="truncate block text-sm sm:text-base font-bold text-base-content">
             {edificio.nombre}
           </span>
         </div>
         <div className="flex-none">
-          <button onClick={logout} className="btn btn-outline btn-error btn-sm gap-1 px-2.5">
-            <span className="icon-[tabler--logout] text-base" aria-hidden="true" />
+          <button onClick={logout} className="btn btn-outline btn-error btn-xs gap-1 px-2.5">
+            <span className="icon-[tabler--logout] text-sm" aria-hidden="true" />
             <span>Salir</span>
           </button>
         </div>
       </nav>
 
+      {/* Barra lateral / Sidebar arquitectónico */}
       <aside
         id="dashboard-drawer"
-        className="overlay overlay-open:translate-x-0 drawer drawer-start hidden w-64 bg-base-100 border-r border-base-200 shadow-sm [--auto-close:lg] lg:flex lg:translate-x-0 lg:static lg:shadow-none flex-col"
+        className="overlay overlay-open:translate-x-0 drawer drawer-start hidden w-64 bg-base-100 border-r arch-border shadow-none [--auto-close:lg] lg:flex lg:translate-x-0 lg:static lg:shadow-none flex-col"
         role="dialog"
         aria-label="Menú de navegación"
         tabIndex={-1}
       >
-        <div className="drawer-header border-b border-base-200 px-4 py-4">
-          <div className="min-w-0 flex-1">
-            <h2 className="drawer-title text-base font-bold text-base-content truncate">{edificio.nombre}</h2>
-            <p className="truncate text-xs text-base-content/60 mt-0.5">{edificio.email}</p>
+        <div className="drawer-header border-b arch-border px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/20 text-primary flex items-center justify-center flex-none">
+              <span className="icon-[tabler--building-community] text-lg" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold text-base-content truncate leading-tight">
+                {edificio.nombre}
+              </h2>
+              <p className="text-2xs text-base-content/60 truncate mt-0.5">
+                {edificio.email}
+              </p>
+            </div>
           </div>
           <button
             type="button"
-            className="btn btn-text btn-circle btn-sm lg:hidden"
+            className="btn btn-ghost btn-circle btn-xs lg:hidden"
             aria-label="Cerrar menú"
             data-overlay="#dashboard-drawer"
           >
-            <span className="icon-[tabler--x] text-xl" aria-hidden="true" />
+            <span className="icon-[tabler--x] text-lg" aria-hidden="true" />
           </button>
         </div>
 
-        <div className="drawer-body px-3 py-3 flex-1 overflow-y-auto">
-          <nav className="flex flex-col gap-1.5">
+        <div className="drawer-body px-3 py-4 flex-1 overflow-y-auto">
+          <span className="text-3xs uppercase tracking-wider font-bold text-base-content/50 px-2.5 block mb-2">
+            Módulos de Copropiedad
+          </span>
+          <nav className="flex flex-col gap-1">
             {links.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -111,15 +125,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   key={link.href}
                   href={link.href}
                   onClick={closeDrawer}
-                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-primary text-white shadow-sm font-bold'
-                      : 'text-base-content/75 hover:text-base-content hover:bg-base-200/80 bg-transparent'
+                      ? 'bg-primary/10 text-primary font-bold border border-primary/25'
+                      : 'text-base-content/75 hover:text-base-content hover:bg-base-200 border border-transparent'
                   }`}
                 >
                   <span
-                    className={`${link.icon} text-xl shrink-0 ${
-                      isActive ? 'text-white' : 'text-base-content/60'
+                    className={`${link.icon} text-lg shrink-0 ${
+                      isActive ? 'text-primary' : 'text-base-content/60'
                     }`}
                     aria-hidden="true"
                   />
@@ -130,15 +144,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
         </div>
 
-        <div className="drawer-footer border-t border-base-200 p-4">
-          <button onClick={logout} className="btn btn-outline btn-error btn-sm w-full gap-2 font-medium">
-            <span className="icon-[tabler--logout] text-lg" aria-hidden="true" />
-            Cerrar Sesión
+        <div className="drawer-footer border-t arch-border p-3.5">
+          <button
+            onClick={logout}
+            className="btn btn-outline btn-error btn-sm w-full gap-2 font-medium rounded-md"
+          >
+            <span className="icon-[tabler--logout] text-base" aria-hidden="true" />
+            <span>Cerrar Sesión</span>
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-3 sm:p-4 overflow-auto bg-base-200 lg:p-6">{children}</main>
+      {/* Contenido principal */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-base-200">
+        <div className="max-w-7xl mx-auto">{children}</div>
+      </main>
     </div>
   );
 }

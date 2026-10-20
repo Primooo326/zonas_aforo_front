@@ -12,6 +12,8 @@ import {
   validarTelefono,
   validarPlaca,
 } from '@/lib/censo-helpers';
+import BuildingPlaque from '@/components/BuildingPlaque';
+import StepperProgreso from '@/components/StepperProgreso';
 import SelectorParqueadero, { ParqueaderoOpcion } from '@/components/censo/SelectorParqueadero';
 
 interface PersonaForm {
@@ -62,6 +64,40 @@ export default function PublicCensoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [enviadoExitoso, setEnviadoExitoso] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [pasoActivo, setPasoActivo] = useState(0);
+
+  const avanzarAPaso2 = () => {
+    setErrorMsg('');
+    const identCalculado = identificador.trim() || [torre.trim(), numeroApto.trim()].filter(Boolean).join(' - ');
+    if (!identCalculado) {
+      setErrorMsg('Por favor selecciona o indica tu número de apartamento o casa antes de continuar.');
+      return;
+    }
+    setPasoActivo(1);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const avanzarAPaso3 = () => {
+    setErrorMsg('');
+    const personasValidas = personas.filter((p) => p.nombreCompleto.trim() && p.fechaNacimiento);
+    if (personasValidas.length === 0) {
+      setErrorMsg('Debes registrar al menos un habitante con su nombre y fecha de nacimiento antes de continuar.');
+      return;
+    }
+    const contactos = personasValidas.filter((p) => p.esContactoPrincipal);
+    if (contactos.length === 0) {
+      setErrorMsg('Debes designar a un adulto como Contacto Principal de la vivienda.');
+      return;
+    }
+    setPasoActivo(2);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const avanzarAPaso4 = () => {
+    setErrorMsg('');
+    setPasoActivo(3);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Catálogo precargado de unidades del edificio
   const [catalogo, setCatalogo] = useState<CatalogoUnidadItem[]>([]);
@@ -484,7 +520,7 @@ export default function PublicCensoPage() {
   if (enviadoExitoso) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-base-200">
-        <div className="card bg-base-100 shadow-lg border border-base-200 p-6 max-w-md w-full text-center space-y-4">
+        <div className="arch-panel p-6 max-w-md w-full text-center space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success">
             <span className="icon-[tabler--check] text-4xl" />
           </div>
@@ -557,8 +593,8 @@ export default function PublicCensoPage() {
         )}
 
         <form onSubmit={enviarCenso} className="space-y-5">
-          {/* 1. Apartamento / Casa */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+          {pasoActivo === 0 && (
+          <div className="arch-panel p-5 space-y-3">
             <div className="flex items-center gap-2.5 border-b pb-3 border-base-200">
               <span className="icon-[tabler--home] text-primary text-2xl shrink-0" />
               <div>
@@ -734,10 +770,21 @@ export default function PublicCensoPage() {
                 </div>
               </div>
             )}
+            <div className="pt-3 border-t arch-border flex justify-end">
+              <button
+                type="button"
+                onClick={avanzarAPaso2}
+                className="btn btn-primary btn-sm w-full sm:w-auto font-semibold gap-1.5 shadow-none"
+              >
+                <span>Continuar a Habitantes</span>
+                <span className="icon-[tabler--arrow-right]" aria-hidden="true" />
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* 2. Habitantes */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+        {pasoActivo === 1 && (
+          <div className="arch-panel p-5 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-base-200">
               <div className="flex items-center gap-2.5">
                 <span className="icon-[tabler--users] text-primary text-2xl shrink-0" />
@@ -891,10 +938,29 @@ export default function PublicCensoPage() {
                 );
               })}
             </div>
+            <div className="pt-3 border-t arch-border flex flex-col-reverse sm:flex-row items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setPasoActivo(0)}
+                className="btn btn-ghost btn-sm w-full sm:w-auto text-base-content/70"
+              >
+                <span className="icon-[tabler--arrow-left]" aria-hidden="true" />
+                <span>Volver a Inmueble</span>
+              </button>
+              <button
+                type="button"
+                onClick={avanzarAPaso3}
+                className="btn btn-primary btn-sm w-full sm:w-auto font-semibold gap-1.5 shadow-none"
+              >
+                <span>Continuar a Mascotas</span>
+                <span className="icon-[tabler--arrow-right]" aria-hidden="true" />
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* 3. Mascotas */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+        {pasoActivo === 2 && (
+          <div className="arch-panel p-5 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-base-200">
               <div className="flex items-center gap-2.5">
                 <span className="icon-[tabler--paw] text-secondary text-2xl shrink-0" />
@@ -1007,10 +1073,29 @@ export default function PublicCensoPage() {
                 </button>
               </div>
             )}
+            <div className="pt-3 border-t arch-border flex flex-col-reverse sm:flex-row items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setPasoActivo(1)}
+                className="btn btn-ghost btn-sm w-full sm:w-auto text-base-content/70"
+              >
+                <span className="icon-[tabler--arrow-left]" aria-hidden="true" />
+                <span>Volver a Habitantes</span>
+              </button>
+              <button
+                type="button"
+                onClick={avanzarAPaso4}
+                className="btn btn-primary btn-sm w-full sm:w-auto font-semibold gap-1.5 shadow-none"
+              >
+                <span>Continuar a Vehículos</span>
+                <span className="icon-[tabler--arrow-right]" aria-hidden="true" />
+              </button>
+            </div>
           </div>
+        )}
 
-          {/* 4. Vehículos */}
-          <div className="card bg-base-100 shadow-sm border border-base-200 p-5 space-y-3">
+        {pasoActivo === 3 && (
+          <div className="arch-panel p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3 border-base-200">
               <div className="flex items-center gap-2.5">
                 <span className="icon-[tabler--car] text-success text-2xl shrink-0" />
@@ -1145,22 +1230,59 @@ export default function PublicCensoPage() {
                 </button>
               </div>
             )}
-          </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn btn-primary w-full btn-sm text-base font-bold gap-2 shadow-sm"
-          >
-            {submitting ? (
-              <span className="loading loading-spinner"></span>
-            ) : (
-              <>
-                <span className="icon-[tabler--send] text-lg" />
-                <span>Enviar Ficha Censal</span>
-              </>
-            )}
-          </button>
+            <div className="p-4 rounded-lg bg-base-200/60 border arch-border space-y-2 text-xs mt-4">
+              <span className="text-2xs font-bold uppercase tracking-wider text-primary block">
+                Resumen de Ficha Censal antes del Envío
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t arch-border">
+                <div>
+                  <span className="text-base-content/60 block text-2xs">Inmueble:</span>
+                  <strong className="text-base-content truncate block">
+                    {identificador || [torre, numeroApto].filter(Boolean).join(' - ') || 'Por definir'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-base-content/60 block text-2xs">Habitantes:</span>
+                  <strong className="text-base-content">{personas.length} persona(s)</strong>
+                </div>
+                <div>
+                  <span className="text-base-content/60 block text-2xs">Mascotas:</span>
+                  <strong className="text-base-content">{tieneMascotas ? `${mascotas.length} mascota(s)` : 'Ninguna'}</strong>
+                </div>
+                <div>
+                  <span className="text-base-content/60 block text-2xs">Vehículos:</span>
+                  <strong className="text-base-content">{tieneVehiculos ? `${vehiculos.length} vehículo(s)` : 'Ninguno'}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t arch-border flex flex-col-reverse sm:flex-row items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setPasoActivo(2)}
+                className="btn btn-ghost btn-sm w-full sm:w-auto text-base-content/70"
+              >
+                <span className="icon-[tabler--arrow-left]" aria-hidden="true" />
+                <span>Volver a Mascotas</span>
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn btn-primary btn-sm w-full sm:w-auto font-bold gap-2 shadow-none px-6"
+              >
+                {submitting ? (
+                  <span className="loading loading-spinner" />
+                ) : (
+                  <>
+                    <span className="icon-[tabler--send] text-base" />
+                    <span>Confirmar y Enviar Censo</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
         </form>
       </div>
     </div>

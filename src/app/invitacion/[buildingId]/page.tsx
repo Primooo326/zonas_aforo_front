@@ -1,7 +1,8 @@
-"use client";
+'use client';
 
 import { apiFetch } from '@/lib/api';
 import SolicitarForm from '@/components/SolicitarForm';
+import BuildingPlaque from '@/components/BuildingPlaque';
 import { use, useEffect, useState } from 'react';
 
 interface Building {
@@ -26,18 +27,21 @@ export default function InvitacionPage({ params }: { params: Promise<{ buildingI
   if (loading) {
     return (
       <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
+        <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     );
   }
 
   if (notFound || !building) {
     return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center">
-        <div className="bg-base-100 rounded-box shadow-sm p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-4 text-center">Edificio no encontrado</h1>
-          <p className="text-base-content/60 text-center">
-            El enlace de invitación no es válido o el edificio ya no existe.
+      <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
+        <div className="arch-panel p-8 max-w-md w-full text-center">
+          <div className="w-12 h-12 rounded-md bg-error/10 text-error flex items-center justify-center mx-auto mb-3">
+            <span className="icon-[tabler--building-off] text-2xl" aria-hidden="true" />
+          </div>
+          <h1 className="text-xl font-bold text-base-content">Edificio no encontrado</h1>
+          <p className="text-sm text-base-content/70 mt-2">
+            El enlace de invitación no es válido o la copropiedad no se encuentra disponible.
           </p>
         </div>
       </div>
@@ -45,22 +49,15 @@ export default function InvitacionPage({ params }: { params: Promise<{ buildingI
   }
 
   return (
-    <div className="min-h-screen bg-base-200">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="text-center mb-6 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-bold text-sm">
-            <span className="icon-[tabler--building-community] text-lg" />
-            <span>{building.nombre}</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-base-content">
-            Portal de Reservas de Zonas Comunes
-          </h1>
-          <p className="text-sm sm:text-base text-base-content/85 font-medium max-w-lg mx-auto">
-            Diligencia el formulario a continuación para solicitar tu turno en las áreas sociales del edificio.
-          </p>
-        </div>
+    <div className="min-h-screen bg-base-200 py-6 sm:py-10 px-4">
+      <div className="container mx-auto max-w-2xl flex flex-col gap-6">
+        <BuildingPlaque
+          nombreEdificio={building.nombre}
+          tipoEdificio="Portal de Copropietarios"
+          subtitulo="Diligencia los datos a continuación para reservar tu turno en las zonas comunes autorizadas."
+        />
 
-        <div className="flex justify-center">
+        <div className="w-full">
           <SolicitarForm edificioId={buildingId} />
         </div>
       </div>

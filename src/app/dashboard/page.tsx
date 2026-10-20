@@ -7,6 +7,8 @@ import { fechaLocal } from '@/lib/fecha';
 import Link from 'next/link';
 import ReservasCalendario from '@/components/ReservasCalendario';
 import ReservasDia from '@/components/ReservasDia';
+import BuildingPlaque from '@/components/BuildingPlaque';
+import AforoScaleMeter from '@/components/AforoScaleMeter';
 
 interface Zona {
   _id: string;
@@ -52,28 +54,16 @@ interface CensoStats {
   pendientes: number;
 }
 
-function colorPct(pct: number) {
-  if (pct >= 100) return 'text-error';
-  if (pct >= 75) return 'text-warning';
-  return 'text-success';
-}
-
-function barraPct(pct: number) {
-  if (pct >= 100) return 'progress-error';
-  if (pct >= 75) return 'progress-warning';
-  return 'progress-success';
-}
-
 const tipoBadge = (tipo: string) => {
   switch (tipo) {
     case 'inmueble':
-      return 'badge-primary';
+      return 'bg-primary/10 text-primary border-primary/20';
     case 'parqueadero':
-      return 'badge-warning';
+      return 'bg-warning/10 text-warning border-warning/20';
     case 'habitacion':
-      return 'badge-info';
+      return 'bg-info/10 text-info border-info/20';
     default:
-      return 'badge-ghost';
+      return 'bg-base-300 text-base-content/70 border-base-content/10';
   }
 };
 
@@ -136,202 +126,217 @@ export default function DashboardPage() {
   const ocupacionAhora = activas.filter(
     (r) => r.horaInicio <= hhmmAhora && hhmmAhora < r.horaFin,
   ).length;
-  const pctOcupacionAhora = totalAforo > 0 ? Math.round((ocupacionAhora / totalAforo) * 100) : 0;
-
-  let picoTurnos = 0;
-  let picoHora = '';
-  for (const r of activas) {
-    const n = activas.filter((s) => s.horaInicio <= r.horaInicio && r.horaInicio < s.horaFin).length;
-    if (n > picoTurnos) {
-      picoTurnos = n;
-      picoHora = r.horaInicio;
-    }
-  }
-  const zonasEnUso = new Set(activas.map((r) => r.zonaId?._id).filter(Boolean)).size;
 
   // Métricas de Venta y Arriendo
   const publicacionesActivas = inmuebles.filter((i) => i.estado === 'activa');
   const totalEnVenta = publicacionesActivas.filter((i) => i.transaccion === 'venta').length;
   const totalEnArriendo = publicacionesActivas.filter((i) => i.transaccion === 'arriendo').length;
-  const totalOtrosTipos = publicacionesActivas.filter(
-    (i) => i.tipo === 'parqueadero' || i.tipo === 'habitacion',
-  ).length;
 
-  // Últimas publicaciones (ordenadas por fecha de creación descendente)
+  // Últimas publicaciones
   const ultimasPublicaciones = [...inmuebles]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
 
   return (
-    <div className="space-y-8">
-      {/* Encabezado General */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Panel de Control</h1>
-        <p className="text-sm text-base-content/60">
-          Resumen operativo de zonas comunes y ofertas de tu edificio
-        </p>
-      </div>
+    <div className="space-y-6 sm:space-y-8">
+      {/* Placa Arquitectónica del Edificio */}
+      <BuildingPlaque
+        nombreEdificio={edificio.nombre}
+        tipoEdificio="Panel de Control y Supervisión"
+        direccion={edificio.email}
+        subtitulo="Monitoreo en tiempo real de ocupación de zonas comunes, agenda del día y registro censal."
+        acciones={
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/invitacion/${edificio.id}`}
+              target="_blank"
+              className="btn btn-outline btn-xs sm:btn-sm gap-1.5 arch-border hover:border-primary"
+            >
+              <span className="icon-[tabler--qrcode] text-base text-primary" aria-hidden="true" />
+              <span>Portal de Residentes (QR)</span>
+            </Link>
+          </div>
+        }
+      />
 
-      {/* PANEL DE CONTROL: 4 KPIS ESENCIALES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1: Ocupación y Aforo Hoy */}
+      {/* RETÍCULA DE 4 KPIS ESTRUCTURALES (Bordes 1px, sin sombras difusas) */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1: Ocupación en Vivo con Escalímetro */}
         <Link
           href="/dashboard/zonas"
-          className="stat bg-base-100 rounded-2xl shadow-sm border border-base-200/60 p-4 sm:p-5 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer block group"
+          className="arch-panel p-4 sm:p-5 hover:border-primary/50 transition-colors flex flex-col justify-between group"
         >
-          <div className="stat-title flex items-center justify-between text-sm font-semibold text-base-content/80 group-hover:text-primary transition-colors">
-            <span className="flex items-center gap-2">
-              <span className="icon-[tabler--gauge] text-xl text-primary" aria-hidden="true" />
-              <span>Ocupación Hoy</span>
-            </span>
-            <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              En Vivo
-            </span>
+          <div>
+            <div className="flex items-center justify-between text-xs font-semibold text-base-content/80 group-hover:text-primary transition-colors">
+              <span className="flex items-center gap-2">
+                <span className="icon-[tabler--gauge] text-lg text-primary" aria-hidden="true" />
+                <span>Ocupación de Zonas</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-3xs font-bold uppercase bg-primary/10 text-primary border border-primary/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-hidden="true" />
+                En Vivo
+              </span>
+            </div>
+
+            <div className="mt-3">
+              <AforoScaleMeter
+                aforoActual={ocupacionAhora}
+                aforoMaximo={totalAforo || 1}
+                tamano="sm"
+                mostrarEtiqueta={false}
+              />
+            </div>
           </div>
-          <div className={`stat-value text-2xl sm:text-3xl mt-2 font-bold ${colorPct(pctOcupacionAhora)}`}>
-            {pctOcupacionAhora}%
-          </div>
-          <div
-            className="progress mt-2.5 h-2 bg-base-200 rounded-full overflow-hidden"
-            role="progressbar"
-            aria-valuenow={pctOcupacionAhora}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className={`progress-bar ${barraPct(pctOcupacionAhora)}`}
-              style={{ width: `${Math.min(100, pctOcupacionAhora)}%` }}
-            />
-          </div>
-          <div className="stat-desc text-xs font-medium text-base-content/60 mt-2 flex items-center justify-between">
-            <span>{ocupacionAhora} de {totalAforo} cupos</span>
-            <span>{activas.length} reservas</span>
+
+          <div className="text-2xs font-medium text-base-content/60 mt-3 pt-2.5 border-t arch-border flex items-center justify-between">
+            <span className="tabular-nums font-semibold text-base-content">{activas.length} reservas activas</span>
+            <span>{zonas.length} zonas</span>
           </div>
         </Link>
 
         {/* KPI 2: Habitantes Censados */}
         <Link
-          href="/dashboard/censo?tab=residentes"
-          className="stat bg-base-100 rounded-2xl shadow-sm border border-base-200/60 p-4 sm:p-5 hover:shadow-md hover:border-info/40 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer block group"
+          href="/dashboard/censo"
+          className="arch-panel p-4 sm:p-5 hover:border-primary/50 transition-colors flex flex-col justify-between group"
         >
-          <div className="stat-title flex items-center justify-between text-sm font-semibold text-base-content/80 group-hover:text-info transition-colors">
-            <span className="flex items-center gap-2">
-              <span className="icon-[tabler--users] text-xl text-info" aria-hidden="true" />
-              <span>Habitantes Censados</span>
-            </span>
-            <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-info/10 text-info">
-              Población
-            </span>
+          <div>
+            <div className="flex items-center justify-between text-xs font-semibold text-base-content/80 group-hover:text-primary transition-colors">
+              <span className="flex items-center gap-2">
+                <span className="icon-[tabler--users] text-lg text-primary" aria-hidden="true" />
+                <span>Habitantes Censados</span>
+              </span>
+              <span className="text-3xs font-semibold uppercase px-1.5 py-0.5 rounded bg-base-300/80 text-base-content/70">
+                Población
+              </span>
+            </div>
+
+            <div className="stat-value text-2xl sm:text-3xl mt-2 font-extrabold text-base-content tabular-nums">
+              {censoStats ? censoStats.totalPersonas : '0'}
+            </div>
           </div>
-          <div className="stat-value text-2xl sm:text-3xl mt-2 font-bold text-base-content">
-            {censoStats ? censoStats.totalPersonas : '-'}
-          </div>
-          <div className="stat-desc text-xs font-medium text-base-content/60 mt-3 flex items-center justify-between">
-            <span>{censoStats ? `${censoStats.menores || 0} menores` : 'Censo activo'}</span>
-            <span>{censoStats ? `${censoStats.adultosMayores || 0} ad. mayores` : ''}</span>
+
+          <div className="text-2xs font-medium text-base-content/60 mt-3 pt-2.5 border-t arch-border flex items-center justify-between">
+            <span className="tabular-nums">{censoStats ? `${censoStats.menores || 0} menores` : 'Censo'}</span>
+            <span className="tabular-nums">{censoStats ? `${censoStats.adultosMayores || 0} mayores` : ''}</span>
           </div>
         </Link>
 
         {/* KPI 3: Inmuebles Registrados */}
         <Link
-          href="/dashboard/censo?tab=inmuebles"
-          className="stat bg-base-100 rounded-2xl shadow-sm border border-base-200/60 p-4 sm:p-5 hover:shadow-md hover:border-secondary/40 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer block group"
+          href="/dashboard/censo"
+          className="arch-panel p-4 sm:p-5 hover:border-primary/50 transition-colors flex flex-col justify-between group"
         >
-          <div className="stat-title flex items-center justify-between text-sm font-semibold text-base-content/80 group-hover:text-secondary transition-colors">
-            <span className="flex items-center gap-2">
-              <span className="icon-[tabler--building-community] text-xl text-secondary" aria-hidden="true" />
-              <span>Inmuebles Registrados</span>
-            </span>
-            <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">
-              Copropiedad
-            </span>
+          <div>
+            <div className="flex items-center justify-between text-xs font-semibold text-base-content/80 group-hover:text-primary transition-colors">
+              <span className="flex items-center gap-2">
+                <span className="icon-[tabler--building-community] text-lg text-primary" aria-hidden="true" />
+                <span>Inmuebles & Unidades</span>
+              </span>
+              <span className="text-3xs font-semibold uppercase px-1.5 py-0.5 rounded bg-base-300/80 text-base-content/70">
+                Copropiedad
+              </span>
+            </div>
+
+            <div className="stat-value text-2xl sm:text-3xl mt-2 font-extrabold text-base-content tabular-nums">
+              {censoStats ? censoStats.totalUnidades : '0'}
+            </div>
           </div>
-          <div className="stat-value text-2xl sm:text-3xl mt-2 font-bold text-base-content">
-            {censoStats ? censoStats.totalUnidades : '-'}
-          </div>
-          <div className="stat-desc text-xs font-medium text-base-content/60 mt-3 flex items-center justify-between">
-            <span>{censoStats ? `${censoStats.totalVehiculos || 0} vehículos` : 'Unidades'}</span>
-            <span>{censoStats ? `${censoStats.totalMascotas || 0} mascotas` : ''}</span>
+
+          <div className="text-2xs font-medium text-base-content/60 mt-3 pt-2.5 border-t arch-border flex items-center justify-between">
+            <span className="tabular-nums">{censoStats ? `${censoStats.totalVehiculos || 0} vehículos` : '0'}</span>
+            <span className="tabular-nums">{censoStats ? `${censoStats.totalMascotas || 0} mascotas` : '0'}</span>
           </div>
         </Link>
 
-        {/* KPI 4: Ofertas Venta / Arriendo */}
+        {/* KPI 4: Cartelera Inmobiliaria */}
         <Link
           href="/dashboard/inmuebles"
-          className="stat bg-base-100 rounded-2xl shadow-sm border border-base-200/60 p-4 sm:p-5 hover:shadow-md hover:border-success/40 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer block group"
+          className="arch-panel p-4 sm:p-5 hover:border-primary/50 transition-colors flex flex-col justify-between group"
         >
-          <div className="stat-title flex items-center justify-between text-sm font-semibold text-base-content/80 group-hover:text-success transition-colors">
-            <span className="flex items-center gap-2">
-              <span className="icon-[tabler--tag] text-xl text-success" aria-hidden="true" />
-              <span>Ofertas Venta/Arriendo</span>
-            </span>
-            <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
-              Catálogo
-            </span>
+          <div>
+            <div className="flex items-center justify-between text-xs font-semibold text-base-content/80 group-hover:text-primary transition-colors">
+              <span className="flex items-center gap-2">
+                <span className="icon-[tabler--home-dollar] text-lg text-primary" aria-hidden="true" />
+                <span>Ofertas Inmobiliarias</span>
+              </span>
+              <span className="text-3xs font-semibold uppercase px-1.5 py-0.5 rounded bg-base-300/80 text-base-content/70">
+                Cartelera
+              </span>
+            </div>
+
+            <div className="stat-value text-2xl sm:text-3xl mt-2 font-extrabold text-primary tabular-nums">
+              {publicacionesActivas.length}
+            </div>
           </div>
-          <div className="stat-value text-2xl sm:text-3xl mt-2 font-bold text-success">
-            {publicacionesActivas.length}
-          </div>
-          <div className="stat-desc text-xs font-medium text-base-content/60 mt-3 flex items-center justify-between">
-            <span>{totalEnVenta} en venta</span>
-            <span>{totalEnArriendo} en arriendo</span>
+
+          <div className="text-2xs font-medium text-base-content/60 mt-3 pt-2.5 border-t arch-border flex items-center justify-between">
+            <span className="tabular-nums">{totalEnVenta} en venta</span>
+            <span className="tabular-nums">{totalEnArriendo} en arriendo</span>
           </div>
         </Link>
-      </div>
+      </section>
 
       {/* Operativa diaria de reservas */}
-      <ReservasDia zonas={zonas} reservas={reservas} />
+      <section className="arch-panel p-4 sm:p-6">
+        <ReservasDia zonas={zonas} reservas={reservas} />
+      </section>
 
       {/* Calendario de Reservas */}
-      <div>
+      <section className="arch-panel p-4 sm:p-6">
         <ReservasCalendario edificioId={edificio.id} />
-      </div>
+      </section>
 
-      {/* SECCIÓN INFERIOR: RESUMEN DE ZONAS + ÚLTIMAS OFERTAS DE VENTA Y ARRIENDO */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Columna 1: Resumen de Zonas */}
-        <div className="bg-base-100 rounded-box shadow-sm p-4 sm:p-5 flex flex-col justify-between">
+      {/* SECCIÓN INFERIOR: RESUMEN DE ZONAS + CARTELERA DE INMUEBLES */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Columna 1: Resumen de Zonas Comunes */}
+        <article className="arch-panel p-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
+            <div className="flex items-center justify-between mb-4 border-b arch-border pb-3">
+              <h2 className="text-sm sm:text-base font-bold flex items-center gap-2 text-base-content">
                 <span className="icon-[tabler--map-pin] text-primary" aria-hidden="true" />
-                Resumen de Zonas Comunes
+                <span>Zonas Comunes Registradas</span>
               </h2>
               <Link
                 href="/dashboard/zonas"
-                className="btn btn-outline btn-xs gap-1"
+                className="btn btn-outline btn-xs gap-1 arch-border hover:border-primary text-2xs"
               >
-                Gestionar
+                <span>Configurar</span>
                 <span className="icon-[tabler--arrow-right] text-xs" aria-hidden="true" />
               </Link>
             </div>
+
             {zonas.length === 0 ? (
-              <div className="py-8 text-center text-base-content/60 text-sm">
-                Aún no has registrado ninguna zona común.
+              <div className="py-8 text-center text-base-content/60 text-xs">
+                Aún no has registrado ninguna zona común en la copropiedad.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="table table-sm">
+                <table className="table table-sm w-full text-xs">
                   <thead>
-                    <tr className="text-xs text-base-content/70">
-                      <th>Nombre</th>
-                      <th>Aforo</th>
-                      <th>Lapso</th>
-                      <th>Horario</th>
+                    <tr className="text-2xs uppercase tracking-wider text-base-content/60 border-b arch-border">
+                      <th className="font-semibold">Zona</th>
+                      <th className="font-semibold text-center">Aforo Máx.</th>
+                      <th className="font-semibold text-center">Lapso</th>
+                      <th className="font-semibold">Horario Asignado</th>
                     </tr>
                   </thead>
-                  <tbody className="text-xs">
+                  <tbody>
                     {zonas.map((z) => (
-                      <tr key={z._id}>
-                        <td className="font-medium">{z.nombre}</td>
-                        <td>{z.aforoMaximo}</td>
-                        <td>{z.lapsoMinutos} min</td>
+                      <tr key={z._id} className="border-b arch-border hover:bg-base-200/50">
+                        <td className="font-bold text-base-content">{z.nombre}</td>
+                        <td className="text-center tabular-nums font-semibold">{z.aforoMaximo}</td>
+                        <td className="text-center tabular-nums text-base-content/70">{z.lapsoMinutos} min</td>
                         <td>
-                          {(z.horarios || []).map((h) => (
-                            <span key={h.dia} className="badge badge-xs badge-success mr-1 mb-1">
-                              {h.dia}: {h.inicio} - {h.fin}
-                            </span>
-                          ))}
+                          <div className="flex flex-wrap gap-1">
+                            {(z.horarios || []).map((h) => (
+                              <span
+                                key={h.dia}
+                                className="inline-flex px-1.5 py-0.5 rounded text-3xs font-medium border arch-border bg-base-200"
+                              >
+                                {h.dia}: {h.inicio}-{h.fin}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -340,81 +345,77 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
+        </article>
 
         {/* Columna 2: Últimas Ofertas de Venta y Arriendo */}
-        <div className="bg-base-100 rounded-box shadow-sm p-4 sm:p-5 flex flex-col justify-between">
+        <article className="arch-panel p-5 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                <span className="icon-[tabler--building] text-primary" aria-hidden="true" />
-                Últimas Publicaciones de Venta y Arriendo
+            <div className="flex items-center justify-between mb-4 border-b arch-border pb-3">
+              <h2 className="text-sm sm:text-base font-bold flex items-center gap-2 text-base-content">
+                <span className="icon-[tabler--home-dollar] text-primary" aria-hidden="true" />
+                <span>Cartelera Inmobiliaria Reciente</span>
               </h2>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Link
                   href="/dashboard/inmuebles/nuevo"
-                  className="btn btn-primary btn-xs gap-1"
+                  className="btn btn-primary btn-xs gap-1 font-semibold shadow-none"
                 >
                   <span className="icon-[tabler--plus] text-xs" aria-hidden="true" />
-                  Nueva
+                  <span>Publicar</span>
                 </Link>
                 <Link
                   href="/dashboard/inmuebles"
-                  className="btn btn-outline btn-xs gap-1"
+                  className="btn btn-outline btn-xs gap-1 arch-border hover:border-primary text-2xs"
                 >
-                  Ver todas
+                  <span>Ver todas</span>
                   <span className="icon-[tabler--arrow-right] text-xs" aria-hidden="true" />
                 </Link>
               </div>
             </div>
+
             {inmuebles.length === 0 ? (
-              <div className="py-8 text-center text-base-content/60 text-sm">
-                No hay publicaciones registradas aún.
+              <div className="py-8 text-center text-base-content/60 text-xs">
+                No hay ofertas inmobiliarias publicadas actualmente.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="table table-sm">
+                <table className="table table-sm w-full text-xs">
                   <thead>
-                    <tr className="text-xs text-base-content/70">
-                      <th>Bien</th>
-                      <th>Transacción</th>
-                      <th>Precio (COP)</th>
-                      <th>Contacto</th>
-                      <th className="text-right">Acción</th>
+                    <tr className="text-2xs uppercase tracking-wider text-base-content/60 border-b arch-border">
+                      <th className="font-semibold">Inmueble</th>
+                      <th className="font-semibold text-center">Modalidad</th>
+                      <th className="font-semibold text-right">Precio (COP)</th>
+                      <th className="font-semibold text-right">Acción</th>
                     </tr>
                   </thead>
-                  <tbody className="text-xs">
+                  <tbody>
                     {ultimasPublicaciones.map((item) => (
-                      <tr key={item._id} className="hover:bg-base-200/40">
+                      <tr key={item._id} className="border-b arch-border hover:bg-base-200/50">
                         <td>
                           <div className="flex items-center gap-1.5">
-                            <span className={`badge badge-xs ${tipoBadge(item.tipo)}`}>
+                            <span className={`inline-flex px-1.5 py-0.5 rounded text-3xs font-bold uppercase border ${tipoBadge(item.tipo)}`}>
                               {item.tipo}
                             </span>
                             {item.piso !== undefined && (
-                              <span className="text-base-content/60 text-2xs">P.{item.piso}</span>
+                              <span className="text-base-content/60 text-3xs tabular-nums">Piso {item.piso}</span>
                             )}
                           </div>
                         </td>
-                        <td>
-                          <span className="badge badge-xs badge-outline">
+                        <td className="text-center">
+                          <span className="inline-flex px-1.5 py-0.5 rounded text-3xs font-medium border arch-border bg-base-200">
                             {item.transaccion === 'venta' ? 'Venta' : 'Arriendo'}
                           </span>
                         </td>
-                        <td className="font-semibold text-primary">
+                        <td className="text-right font-bold text-primary tabular-nums">
                           ${item.precio.toLocaleString('es-CO')}
                         </td>
-                        <td className="text-base-content/70 whitespace-nowrap">
-                          {item.telefono}
-                        </td>
-                        <td className="text-right whitespace-nowrap">
+                        <td className="text-right">
                           <Link
                             href={`/dashboard/inmuebles/${item._id}/edit`}
-                            className="btn btn-outline btn-primary btn-xs gap-1"
+                            className="btn btn-ghost btn-xs text-base-content/70 hover:text-primary"
                             title="Editar publicación"
                           >
-                            <span className="icon-[tabler--edit] text-xs" aria-hidden="true" />
-                            <span>Editar</span>
+                            <span className="icon-[tabler--edit] text-sm" aria-hidden="true" />
                           </Link>
                         </td>
                       </tr>
@@ -424,8 +425,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
     </div>
   );
 }

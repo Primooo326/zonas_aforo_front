@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
 import Link from 'next/link';
+import BuildingPlaque from '@/components/BuildingPlaque';
 
 interface Inmueble {
   _id: string;
@@ -65,7 +66,7 @@ export default function InmueblesPublicPage({ params }: { params: Promise<{ edif
   useEffect(() => {
     if (edificioId) {
       apiFetch(`/edificio/${edificioId}`)
-        .then((b: any) => {
+        .then((b: { nombre?: string }) => {
           if (b?.nombre) setNombreEdificio(b.nombre);
         })
         .catch(() => {});
@@ -167,7 +168,7 @@ export default function InmueblesPublicPage({ params }: { params: Promise<{ edif
         </div>
 
         {/* Barra superior de control (Botón Filtros Collapse + Switcher de Vista) */}
-        <div className="bg-base-100 p-3.5 rounded-box shadow-sm flex items-center justify-between gap-3">
+        <div className="arch-panel p-3.5 flex items-center justify-between gap-3">
           {/* Botón Collapse de Filtros */}
           <button
             type="button"
@@ -371,12 +372,12 @@ export default function InmueblesPublicPage({ params }: { params: Promise<{ edif
 
         {/* Contenido Principal */}
         {loading ? (
-          <div className="bg-base-100 rounded-box shadow-sm flex flex-col items-center justify-center py-20">
+          <div className="arch-panel flex flex-col items-center justify-center py-20">
             <span className="loading loading-spinner loading-lg text-primary"></span>
             <p className="text-sm text-base-content/60 mt-4">Cargando catálogo...</p>
           </div>
         ) : inmueblesFiltrados.length === 0 ? (
-          <div className="bg-base-100 rounded-box shadow-sm p-12 text-center">
+          <div className="arch-panel p-10 text-center">
             <div className="flex justify-center mb-3">
               <span className="icon-[tabler--home-search] text-5xl text-base-content/30" aria-hidden="true" />
             </div>
@@ -398,7 +399,7 @@ export default function InmueblesPublicPage({ params }: { params: Promise<{ edif
           </div>
         ) : viewMode === 'table' ? (
           /* ================= VISTA TABLA (POR DEFECTO) ================= */
-          <div className="bg-base-100 rounded-box shadow-sm overflow-hidden border border-base-200">
+          <div className="arch-panel overflow-hidden">
             <div className="overflow-x-auto">
               <table className="table table-hover w-full min-w-[620px]">
                 <thead>
