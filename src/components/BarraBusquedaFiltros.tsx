@@ -100,10 +100,10 @@ export default function BarraBusquedaFiltros({
         </div>
 
         {/* 2. Controles de Derecha: Orden + Switcher Vista + Botón Filtros */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Selector de Orden */}
           {opcionesOrden.length > 0 && (
-            <div className="flex-1 sm:flex-initial min-w-[170px]">
+            <div className="flex-1 sm:flex-initial min-w-[130px] sm:min-w-[170px]">
               <select
                 value={orden}
                 onChange={(e) => onOrdenChange(e.target.value)}
@@ -216,7 +216,7 @@ export default function BarraBusquedaFiltros({
           </div>
 
           {/* Contenido inyectado de filtros */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {children}
           </div>
         </div>

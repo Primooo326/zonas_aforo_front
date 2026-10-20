@@ -131,6 +131,24 @@
   transition: background-color 150ms ease, opacity 150ms ease;
 }
 
+/* ============================================================== */
+/* PREVENCIÓN DE BLOQUEO POR OVERLAYS / BACKDROPS EN MOBILE      */
+/* Garantiza que ningún backdrop residual o inactivo intercepte  */
+/* toques, clics o gestos del usuario                            */
+/* ============================================================== */
+body:not(:has(#dashboard-drawer.open)) .overlay-backdrop,
+body:not(:has(#dashboard-drawer.open)) [data-overlay-backdrop-template],
+body:not(:has(#dashboard-drawer.open)) #dashboard-drawer-backdrop,
+.overlay-backdrop.hidden,
+.overlay-backdrop[aria-hidden="true"],
+#dashboard-drawer-backdrop.hidden {
+  pointer-events: none !important;
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  z-index: -9999 !important;
+}
+
 @import "flatpickr/dist/flatpickr.css";
 @import "flyonui/src/vendor/flatpickr.css";
 

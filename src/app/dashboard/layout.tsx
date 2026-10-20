@@ -24,9 +24,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isLoading, edificio, router]);
 
-  if (isLoading) return null;
-  if (!edificio) return null;
-
   const links = [
     { href: '/dashboard', label: 'Panel de Control', icon: 'icon-[tabler--layout-dashboard]' },
     { href: '/dashboard/zonas', label: 'Zonas Comunes & Reservas', icon: 'icon-[tabler--calendar-event]' },
@@ -49,10 +46,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     document.body.classList.remove('overlay-body-open');
     document.body.style.overflow = '';
+
+    // Eliminación forzosa e inmediata de cualquier backdrop residual generado por FlyonUI
+    const backdrops = document.querySelectorAll(
+      '.overlay-backdrop, [data-overlay-backdrop-template], #dashboard-drawer-backdrop'
+    );
+    backdrops.forEach((backdrop) => {
+      backdrop.remove();
+    });
   };
 
+  // Garantizar cierre del drawer y purga de backdrops en cualquier cambio de ruta
+  useEffect(() => {
+    closeDrawer();
+  }, [pathname]);
+
+  // Capturar clicks en el backdrop para asegurar limpieza total e inmediata
+  useEffect(() => {
+    const handleBackdropClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.classList.contains('overlay-backdrop') ||
+          target.id === 'dashboard-drawer-backdrop' ||
+          target.hasAttribute('data-overlay-backdrop-template'))
+      ) {
+        closeDrawer();
+      }
+    };
+    document.addEventListener('click', handleBackdropClick, true);
+    return () => {
+      document.removeEventListener('click', handleBackdropClick, true);
+    };
+  }, []);
+
+  if (isLoading) return null;
+  if (!edificio) return null;
+
   return (
-    <div className="flex h-screen flex-col lg:flex-row bg-base-200">
+    <div className="flex h-screen flex-col lg:flex-row bg-base-200 overflow-hidden w-full">
       {/* Barra superior de navegación móvil */}
       <nav className="navbar bg-base-100 border-b arch-border lg:hidden px-3 min-h-14">
         <div className="flex-none">
@@ -105,6 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <button
             type="button"
+            onClick={closeDrawer}
             className="btn btn-ghost btn-circle btn-xs lg:hidden"
             aria-label="Cerrar menú"
             data-overlay="#dashboard-drawer"
@@ -156,7 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Contenido principal */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto bg-base-200">
+      <main className="flex-1 min-w-0 p-3.5 sm:p-6 lg:p-8 overflow-y-auto overflow-x-hidden bg-base-200">
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
     </div>

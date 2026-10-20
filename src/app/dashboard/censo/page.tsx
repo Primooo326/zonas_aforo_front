@@ -936,7 +936,11 @@ export default function CensoDashboardPage() {
       )}
 
       {/* TABS DE NAVEGACIÓN */}
-      <div className="flex border-b border-base-200 overflow-x-auto gap-1 pb-0.5">
+      <div
+        role="tablist"
+        aria-label="Pestañas de censo"
+        data-tabs-censo
+        className="flex border-b border-base-200 overflow-x-auto gap-1 pb-0.5 touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setActiveTab('inmuebles')}
