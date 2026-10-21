@@ -708,10 +708,18 @@ export function transformarHojaExcel(
     ownerNames.forEach((n) => {
       const yaExiste = unidad.personas.some((p) => p.nombreCompleto.toLowerCase() === n.toLowerCase());
       if (!yaExiste) {
-        const esPrimerContacto = unidad.personas.length === 0;
+        let esMenor = false;
+        if (fechaNacExtraida) {
+          const nac = new Date(fechaNacExtraida);
+          if (!isNaN(nac.getTime()) && new Date().getFullYear() - nac.getFullYear() < 18) {
+            esMenor = true;
+          }
+        }
+        const condicion = esMenor ? 'conviviente' : 'propietario';
+        const esPrimerContacto = !esMenor && unidad.personas.length === 0;
         unidad.personas.push({
           nombreCompleto: n,
-          condicion: 'propietario',
+          condicion,
           esContactoPrincipal: esPrimerContacto,
           documento: rawDocumento,
           fechaNacimiento: fechaNacExtraida,
@@ -758,16 +766,35 @@ export function transformarHojaExcel(
   const filasPreview: FilaSanitizadaPreview[] = [];
 
   for (const [key, unidad] of unidadesMap.entries()) {
-    // Garantizar que EXACTAMENTE una persona sea contacto principal
+    // Garantizar que EXACTAMENTE un adulto sea contacto principal y ningún menor quede como propietario
     let tienePrincipal = false;
     unidad.personas.forEach((p) => {
-      if (p.esContactoPrincipal) {
+      let esMenor = false;
+      if (p.fechaNacimiento) {
+        const nac = new Date(p.fechaNacimiento);
+        if (!isNaN(nac.getTime()) && new Date().getFullYear() - nac.getFullYear() < 18) {
+          esMenor = true;
+        }
+      }
+      if (esMenor) {
+        p.condicion = 'conviviente';
+        p.esContactoPrincipal = false;
+      } else if (p.esContactoPrincipal) {
         if (!tienePrincipal) tienePrincipal = true;
         else p.esContactoPrincipal = false;
       }
     });
     if (!tienePrincipal && unidad.personas.length > 0) {
-      unidad.personas[0].esContactoPrincipal = true;
+      const primerAdulto = unidad.personas.find((p) => {
+        if (!p.fechaNacimiento) return true;
+        const nac = new Date(p.fechaNacimiento);
+        return isNaN(nac.getTime()) || new Date().getFullYear() - nac.getFullYear() >= 18;
+      });
+      if (primerAdulto) {
+        primerAdulto.esContactoPrincipal = true;
+      } else {
+        unidad.personas[0].esContactoPrincipal = true;
+      }
     }
 
     inmuebles.push({

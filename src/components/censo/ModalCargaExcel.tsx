@@ -27,24 +27,24 @@ interface ModalCargaExcelProps {
 type PasoWizard = 1 | 2 | 3 | 4;
 
 const DESTINOS_OPCIONES: { valor: CampoCensoDestino; etiqueta: string; descripcion: string }[] = [
-  { valor: 'numeroApto', etiqueta: '🏢 Número de Inmueble / Apartamento (Obligatorio)', descripcion: 'Identificador del apto o casa' },
-  { valor: 'torre', etiqueta: '🏙️ Torre / Bloque / Manzana', descripcion: 'Torre del edificio' },
-  { valor: 'coeficiente', etiqueta: '📊 Coeficiente de Copropiedad', descripcion: 'Porcentaje o alícuota de copropiedad' },
-  { valor: 'nombrePropietario', etiqueta: '👤 Nombre del Propietario', descripcion: 'Titular o propietario del inmueble' },
-  { valor: 'residentes', etiqueta: '👥 Residentes / Convivientes', descripcion: 'Nombres de las personas que habitan la unidad' },
-  { valor: 'documento', etiqueta: '🪪 Documento / Cédula', descripcion: 'Documento de identidad del titular' },
-  { valor: 'edad', etiqueta: '⏳ Edad (Años)', descripcion: 'Edad en años del residente' },
-  { valor: 'fechaNacimiento', etiqueta: '🎂 Fecha de Nacimiento', descripcion: 'Fecha de nacimiento del residente' },
-  { valor: 'email', etiqueta: '✉️ Correo(s) Electrónico(s)', descripcion: 'Emails de contacto' },
-  { valor: 'telefono', etiqueta: '📞 Teléfono(s) / Celular(es)', descripcion: 'Teléfonos de contacto' },
-  { valor: 'parqueadero', etiqueta: '🚗 Parqueadero Asignado', descripcion: 'Número o identificador del parqueadero asignado a la unidad' },
-  { valor: 'placaVehiculo', etiqueta: '🚘 Placa / Vehículo', descripcion: 'Placa del vehículo asignado a la unidad' },
-  { valor: 'mascota', etiqueta: '🐾 Mascota(s)', descripcion: 'Nombre o descripción de la mascota' },
-  { valor: 'tipoOcupacion', etiqueta: '🚪 Estado de Ocupación', descripcion: 'Habitada o desocupada' },
-  { valor: 'metrosCuadrados', etiqueta: '📐 Metros Cuadrados (Área)', descripcion: 'Área privada' },
-  { valor: 'cuartos', etiqueta: '🛏️ Habitaciones / Cuartos', descripcion: 'Número de alcobas' },
-  { valor: 'banos', etiqueta: '🚿 Baños', descripcion: 'Número de baños' },
-  { valor: 'ignorar', etiqueta: '❌ Ignorar esta columna', descripcion: 'No importar estos datos' },
+  { valor: 'numeroApto', etiqueta: 'Número de Apto / Casa (Obligatorio)', descripcion: 'Identificador del inmueble' },
+  { valor: 'torre', etiqueta: 'Torre / Bloque', descripcion: 'Torre o manzana' },
+  { valor: 'coeficiente', etiqueta: 'Coeficiente de Copropiedad', descripcion: 'Porcentaje o alícuota' },
+  { valor: 'nombrePropietario', etiqueta: 'Nombre del Propietario', descripcion: 'Titular del inmueble' },
+  { valor: 'residentes', etiqueta: 'Residentes / Convivientes', descripcion: 'Habitantes de la unidad' },
+  { valor: 'documento', etiqueta: 'Documento / Cédula', descripcion: 'Documento de identidad' },
+  { valor: 'edad', etiqueta: 'Edad (Años)', descripcion: 'Edad del residente' },
+  { valor: 'fechaNacimiento', etiqueta: 'Fecha de Nacimiento', descripcion: 'Fecha de nacimiento' },
+  { valor: 'email', etiqueta: 'Correo Electrónico', descripcion: 'Emails de contacto' },
+  { valor: 'telefono', etiqueta: 'Teléfono / Celular', descripcion: 'Teléfonos de contacto' },
+  { valor: 'parqueadero', etiqueta: 'Parqueadero Asignado', descripcion: 'Número de parqueadero' },
+  { valor: 'placaVehiculo', etiqueta: 'Placa / Vehículo', descripcion: 'Placa del vehículo' },
+  { valor: 'mascota', etiqueta: 'Mascota(s)', descripcion: 'Nombre de mascota' },
+  { valor: 'tipoOcupacion', etiqueta: 'Estado de Ocupación', descripcion: 'Habitada o desocupada' },
+  { valor: 'metrosCuadrados', etiqueta: 'Área (m²)', descripcion: 'Área privada' },
+  { valor: 'cuartos', etiqueta: 'Habitaciones', descripcion: 'Número de cuartos' },
+  { valor: 'banos', etiqueta: 'Baños', descripcion: 'Número de baños' },
+  { valor: 'ignorar', etiqueta: '— Ignorar esta columna —', descripcion: 'Omitir' },
 ];
 
 export default function ModalCargaExcel({
@@ -323,6 +323,49 @@ export default function ModalCargaExcel({
       const emailsFinales = Array.from(emailsSet);
       const telsFinales = Array.from(telsSet);
 
+      // Reclasificar menores de 18 años a convivientes y garantizar un contacto principal adulto
+      personasCombinadas.forEach((p) => {
+        let esMenor = false;
+        if (p.fechaNacimiento) {
+          const nac = new Date(p.fechaNacimiento);
+          if (!isNaN(nac.getTime()) && new Date().getFullYear() - nac.getFullYear() < 18) {
+            esMenor = true;
+          }
+        }
+        if (esMenor) {
+          p.condicion = 'conviviente';
+          p.esContactoPrincipal = false;
+        }
+      });
+
+      let tieneAdultoPrincipal = false;
+      personasCombinadas.forEach((p) => {
+        let esMenor = false;
+        if (p.fechaNacimiento) {
+          const nac = new Date(p.fechaNacimiento);
+          if (!isNaN(nac.getTime()) && new Date().getFullYear() - nac.getFullYear() < 18) {
+            esMenor = true;
+          }
+        }
+        if (!esMenor && p.esContactoPrincipal) {
+          if (!tieneAdultoPrincipal) tieneAdultoPrincipal = true;
+          else p.esContactoPrincipal = false;
+        }
+      });
+
+      if (!tieneAdultoPrincipal && personasCombinadas.length > 0) {
+        const primerAdulto = personasCombinadas.find((p) => {
+          if (!p.fechaNacimiento) return true;
+          const nac = new Date(p.fechaNacimiento);
+          return isNaN(nac.getTime()) || new Date().getFullYear() - nac.getFullYear() >= 18;
+        });
+        if (primerAdulto) {
+          primerAdulto.esContactoPrincipal = true;
+        } else {
+          personasCombinadas[0].esContactoPrincipal = true;
+        }
+      }
+
       return {
         ...fila,
         personas: personasCombinadas,
@@ -372,7 +415,10 @@ export default function ModalCargaExcel({
     };
 
     setFilasPreview(filasEnriquecidas);
-    setAdvertenciasSanitizacion([...transformacion.advertencias, ...(multiSheetData?.advertencias ?? [])]);
+    const advertenciasReales = [...transformacion.advertencias, ...(multiSheetData?.advertencias ?? [])].filter(
+      (adv) => !adv.toLowerCase().includes('consolidado de copropiedad') && !adv.toLowerCase().includes('procesado:'),
+    );
+    setAdvertenciasSanitizacion(advertenciasReales);
     setParsedDataFinal(parsedEnriquecido);
     setPaso(3);
   };
@@ -449,17 +495,26 @@ export default function ModalCargaExcel({
       const residentesActualizados = filasPreview
         .filter((f) => Boolean(f.numeroApto))
         .flatMap((f) =>
-          f.personas.map((p) => ({
-            torre: f.torre,
-            apto: f.numeroApto,
-            nombreCompleto: p.nombreCompleto,
-            ...(p.documento ? { documento: p.documento } : {}),
-            condicion: p.condicion,
-            esContactoPrincipal: p.esContactoPrincipal,
-            ...(p.fechaNacimiento ? { fechaNacimiento: p.fechaNacimiento } : {}),
-            telefono: p.telefono,
-            email: p.email,
-          })),
+          f.personas.map((p) => {
+            let esMenor = false;
+            if (p.fechaNacimiento) {
+              const nac = new Date(p.fechaNacimiento);
+              if (!isNaN(nac.getTime()) && new Date().getFullYear() - nac.getFullYear() < 18) {
+                esMenor = true;
+              }
+            }
+            return {
+              torre: f.torre,
+              apto: f.numeroApto,
+              nombreCompleto: p.nombreCompleto,
+              ...(p.documento ? { documento: p.documento } : {}),
+              condicion: esMenor ? ('conviviente' as const) : p.condicion,
+              esContactoPrincipal: esMenor ? false : p.esContactoPrincipal,
+              ...(p.fechaNacimiento ? { fechaNacimiento: p.fechaNacimiento } : {}),
+              telefono: p.telefono,
+              email: p.email,
+            };
+          }),
         );
 
       const res = await apiFetch('/censo/importar-masivo', {
@@ -523,67 +578,50 @@ export default function ModalCargaExcel({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Cabecera del Modal con Stepper */}
-        <div className="p-4 sm:p-5 border-b border-base-content/10 shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="icon-[tabler--file-spreadsheet] text-success text-2xl shrink-0" aria-hidden="true" />
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-bold text-base-content truncate">
-                  Importador Universal de Censo e Inmuebles
-                </h2>
-                <p className="text-2xs text-base-content/60 truncate">
-                  Carga archivos de cualquier formato con auto-detección y sanitización
-                </p>
-              </div>
+        {/* Cabecera del Modal */}
+        <div className="px-5 py-3.5 border-b border-base-200 shrink-0 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="icon-[tabler--file-spreadsheet] text-success text-xl shrink-0" />
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold text-base-content leading-tight">
+                Importar Censo
+              </h2>
+              <p className="text-2xs text-base-content/60 truncate">
+                {edificioNombre}
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={handleCerrar}
-              className="btn btn-circle btn-sm btn-ghost shrink-0"
-              aria-label="Cerrar modal"
-            >
-              ✕
-            </button>
           </div>
 
-          {/* Stepper Visual */}
+          {/* Stepper Minimalista */}
           {paso < 4 && (
-            <div className="grid grid-cols-3 gap-2 pt-4">
-              <div
-                className={`flex items-center gap-2 text-xs font-semibold pb-1.5 border-b-2 transition-colors ${
-                  paso === 1 ? 'border-primary text-primary' : 'border-base-200 text-base-content/60'
-                }`}
-              >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-2xs">1</span>
-                <span className="truncate">Archivo y Hoja</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 text-xs font-semibold pb-1.5 border-b-2 transition-colors ${
-                  paso === 2 ? 'border-primary text-primary' : 'border-base-200 text-base-content/60'
-                }`}
-              >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-2xs">2</span>
-                <span className="truncate">Mapeo de Columnas</span>
-              </div>
-              <div
-                className={`flex items-center gap-2 text-xs font-semibold pb-1.5 border-b-2 transition-colors ${
-                  paso === 3 ? 'border-primary text-primary' : 'border-base-200 text-base-content/60'
-                }`}
-              >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-2xs">3</span>
-                <span className="truncate">Vista Previa & Limpieza</span>
-              </div>
+            <div className="flex items-center gap-1.5 text-xs text-base-content/60">
+              <span className={`px-2 py-0.5 rounded text-2xs font-medium transition-colors ${paso === 1 ? 'bg-primary/10 text-primary font-semibold' : ''}`}>1. Archivo</span>
+              <span className="text-base-content/20">/</span>
+              <span className={`px-2 py-0.5 rounded text-2xs font-medium transition-colors ${paso === 2 ? 'bg-primary/10 text-primary font-semibold' : ''}`}>2. Columnas</span>
+              <span className="text-base-content/20">/</span>
+              <span className={`px-2 py-0.5 rounded text-2xs font-medium transition-colors ${paso === 3 ? 'bg-primary/10 text-primary font-semibold' : ''}`}>3. Revisión</span>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={handleCerrar}
+            className="btn btn-circle btn-xs btn-ghost shrink-0"
+            aria-label="Cerrar modal"
+          >
+            ✕
+          </button>
         </div>
 
         {/* Contenido Principal con Scroll */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
           {errorGlobal && (
-            <div className="alert alert-error text-xs flex items-center gap-2">
-              <span className="icon-[tabler--alert-circle] text-base shrink-0" />
-              <span>{errorGlobal}</span>
+            <div className="alert alert-error text-xs flex items-center justify-between gap-2 py-2">
+              <div className="flex items-center gap-2">
+                <span className="icon-[tabler--alert-circle] text-base shrink-0" />
+                <span>{errorGlobal}</span>
+              </div>
+              <button type="button" onClick={() => setErrorGlobal('')} className="btn btn-ghost btn-2xs">✕</button>
             </div>
           )}
 
@@ -591,42 +629,14 @@ export default function ModalCargaExcel({
               PASO 1: CARGA DE ARCHIVO Y SELECCIÓN DE HOJA
               ========================================================================= */}
           {paso === 1 && (
-            <div className="space-y-5">
-              {/* Plantillas Oficiales */}
-              <div className="p-3.5 rounded-xl bg-base-200/40 border border-base-200 space-y-2.5">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="text-xs font-semibold text-base-content flex items-center gap-1.5">
-                    <span className="icon-[tabler--template] text-primary" />
-                    ¿Aún no tienes un archivo estructurado? Descarga una plantilla oficial:
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={() => descargarPlantillaExcel(edificioNombre)}
-                    className="btn btn-xs btn-outline gap-1.5 flex-1"
-                  >
-                    <span className="icon-[tabler--file-spreadsheet]" />
-                    Plantilla Básica (Inmuebles)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => descargarPlantillaCompletaExcel(edificioNombre)}
-                    className="btn btn-xs btn-outline btn-primary gap-1.5 flex-1"
-                  >
-                    <span className="icon-[tabler--sparkles]" />
-                    Plantilla Completa (Residentes y Vehículos)
-                  </button>
-                </div>
-              </div>
-
+            <div className="space-y-3.5">
               {/* Zona de Carga Drag & Drop */}
               <div
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                  file ? 'border-primary/50 bg-primary/5' : 'border-base-content/20 hover:border-primary/50 hover:bg-base-200/30'
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                  file ? 'border-primary/50 bg-primary/5' : 'border-base-content/20 hover:border-primary/40 hover:bg-base-200/20'
                 }`}
               >
                 <input
@@ -637,94 +647,89 @@ export default function ModalCargaExcel({
                   className="hidden"
                 />
 
-                <span className="icon-[tabler--cloud-upload] text-4xl text-primary mx-auto mb-2 block" />
+                <span className="icon-[tabler--cloud-upload] text-3xl text-primary mx-auto mb-2 block" />
 
                 {file ? (
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <p className="text-sm font-bold text-base-content">{file.name}</p>
-                    <p className="text-xs text-base-content/60">
+                    <p className="text-2xs text-base-content/60">
                       {(file.size / 1024).toFixed(1)} KB — Clic para cambiar de archivo
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-base-content">
-                      Arrastra y suelta aquí cualquier archivo Excel, o{' '}
-                      <span className="text-primary underline">haz clic para examinar</span>
+                      Selecciona o arrastra el archivo Excel (.xlsx, .xls)
                     </p>
-                    <p className="text-2xs text-base-content/60">
-                      Acepta cualquier orden de columnas, directorios mixtos o formatos (.xlsx, .xls)
+                    <p className="text-2xs text-base-content/50">
+                      Compatible con plantillas oficiales y consolidados con pestañas de vehículos y mascotas
                     </p>
                   </div>
                 )}
               </div>
 
+              {/* Plantillas de Referencia en una sola línea sutil */}
+              <div className="flex items-center justify-between text-2xs text-base-content/60 px-1">
+                <span>¿No tienes un archivo estructurado?</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => descargarPlantillaExcel(edificioNombre)}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Plantilla Básica
+                  </button>
+                  <span>·</span>
+                  <button
+                    type="button"
+                    onClick={() => descargarPlantillaCompletaExcel(edificioNombre)}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Plantilla Completa
+                  </button>
+                </div>
+              </div>
+
               {loading && (
                 <div className="flex items-center justify-center gap-2 py-4 text-xs text-base-content/70">
                   <span className="loading loading-spinner loading-sm" />
-                  <span>Analizando hojas y detectando columnas...</span>
+                  <span>Analizando hojas del archivo...</span>
                 </div>
               )}
 
               {/* Selector de Hojas Detectadas */}
               {libro && !loading && (
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-base-content">
-                      Pestañas encontradas en el libro ({libro.hojas.length}):
-                    </span>
-                    <span className="text-2xs text-base-content/60">Selecciona la hoja de apartamentos</span>
+                <div className="space-y-2 pt-1">
+                  <div className="text-xs font-semibold text-base-content">
+                    Pestaña de apartamentos:
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {libro.hojas.map((h) => {
                       const isSelected = hojaSeleccionada === h.nombre;
                       return (
                         <div
                           key={h.nombre}
                           onClick={() => cambiarHojaSeleccionada(h.nombre)}
-                          className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                          className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
                             isSelected
-                              ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                              : 'border-base-200 bg-base-200/30 hover:border-base-content/20'
+                              ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                              : 'border-base-200 bg-base-200/20 hover:border-base-content/20'
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-base-content truncate flex items-center gap-1.5">
-                                <span className="icon-[tabler--table] text-sm text-primary shrink-0" />
-                                {h.nombre}
-                              </div>
-                              <div className="text-2xs text-base-content/60 pt-0.5">
-                                {h.totalFilas} filas • {h.columnas.length} columnas
-                              </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs font-medium text-base-content truncate flex items-center gap-1.5">
+                              <span className="icon-[tabler--table] text-sm text-primary shrink-0" />
+                              {h.nombre}
                             </div>
-                            {h.nombre === libro.hojaRecomendada && (
-                              <span className="badge badge-success badge-xs shrink-0 text-3xs font-semibold">
-                                Sugerida
-                              </span>
-                            )}
+                            <div className="text-2xs text-base-content/50 shrink-0">
+                              {h.totalFilas} filas
+                            </div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
-
-                  {/* Alerta de Hojas Operativas */}
-                  {libro.hojasOperativasDetectadas.length > 0 && (
-                    <div className="alert alert-info text-xs flex items-start gap-2 bg-info/10 border-info/20">
-                      <span className="icon-[tabler--info-circle] text-base shrink-0 mt-0.5 text-info" />
-                      <div className="space-y-0.5">
-                        <div className="font-semibold text-base-content">Pestañas operativas detectadas:</div>
-                        <div className="text-2xs text-base-content/70">
-                          Identificamos hojas como{' '}
-                          <span className="font-semibold">{libro.hojasOperativasDetectadas.join(', ')}</span>. Estas corresponden
-                          a directorios de proveedores y personal operativo, y quedan reservadas para los módulos
-                          administrativos correspondientes.
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -734,118 +739,67 @@ export default function ModalCargaExcel({
               PASO 2: MAPEO INTELIGENTE DE COLUMNAS
               ========================================================================= */}
           {paso === 2 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-2.5 border-base-content/10">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b pb-2 border-base-content/10">
                 <div>
-                  <h3 className="text-sm font-bold text-base-content">
-                    Asocia las columnas de la hoja &quot;{hojaSeleccionada}&quot;
+                  <h3 className="text-sm font-semibold text-base-content">
+                    Columnas de &quot;{hojaSeleccionada}&quot;
                   </h3>
-                  <p className="text-2xs text-base-content/60">
-                    El sistema pre-mapeó las columnas por heurística. Ajusta cualquier campo si es necesario.
-                  </p>
+                  {multiSheetData && (multiSheetData.vehiculos.length > 0 || multiSheetData.mascotas.length > 0 || multiSheetData.residentes.length > 0) && (
+                    <p className="text-2xs text-base-content/60 pt-0.5">
+                      Vinculados automáticamente:{' '}
+                      {[
+                        multiSheetData.vehiculos.length > 0 && `${multiSheetData.vehiculos.length} vehículos`,
+                        multiSheetData.mascotas.length > 0 && `${multiSheetData.mascotas.length} mascotas`,
+                        multiSheetData.residentes.length > 0 && `${multiSheetData.residentes.length} personas adicionales`,
+                      ].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
                   onClick={() => setMapeo(sugerirMapeoColumnas(columnasHoja))}
                   className="btn btn-ghost btn-xs gap-1 text-primary"
-                  title="Reiniciar coincidencia automática"
                 >
                   <span className="icon-[tabler--refresh] text-xs" />
                   Auto-detectar
                 </button>
               </div>
 
-              {/* Banner explicativo de hojas complementarias detectadas */}
-              {(libro?.esConsolidadoCopropiedad || (multiSheetData && (multiSheetData.vehiculos.length > 0 || multiSheetData.mascotas.length > 0 || multiSheetData.residentes.length > 0))) && (
-                <div className="alert alert-info text-xs bg-info/10 border-info/20 shadow-xs flex items-start gap-3 p-3 rounded-xl">
-                  <span className="icon-[tabler--layers-intersect] text-xl text-info shrink-0 mt-0.5" />
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="font-bold text-base-content text-xs">
-                        Hojas Complementarias Detectadas y Vinculadas Automáticamente
-                      </span>
-                      <span className="badge badge-info badge-xs font-semibold">
-                        {libro?.esConsolidadoCopropiedad ? 'Consolidado Multi-Pestaña' : 'Multi-Hoja'}
-                      </span>
-                    </div>
-                    <p className="text-2xs text-base-content/80 leading-relaxed">
-                      En este paso asocias las columnas de la hoja base <strong>&quot;{hojaSeleccionada}&quot;</strong> (inmuebles, propietarios y parqueaderos). Las pestañas especializadas de vehículos, mascotas y autorizados se vinculan automáticamente por Torre y Apartamento sin requerir mapeo manual:
-                    </p>
-                    <div className="flex flex-wrap gap-2 pt-0.5">
-                      {multiSheetData && multiSheetData.vehiculos.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
-                          <span className="text-primary font-bold">🚘 {multiSheetData.vehiculos.length}</span>
-                          <span>Vehículos ({libro?.hojasConsolidadoDetectadas?.vehiculos || 'VEHICULOS'})</span>
-                        </div>
-                      )}
-                      {multiSheetData && multiSheetData.mascotas.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
-                          <span className="text-secondary font-bold">🐾 {multiSheetData.mascotas.length}</span>
-                          <span>Mascotas ({libro?.hojasConsolidadoDetectadas?.mascotas || 'MASCOTAS'})</span>
-                        </div>
-                      )}
-                      {multiSheetData && multiSheetData.residentes.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
-                          <span className="text-accent font-bold">👥 {multiSheetData.residentes.length}</span>
-                          <span>Residentes Adicionales</span>
-                        </div>
-                      )}
-                      {multiSheetData && multiSheetData.parqueaderos.length > 0 && (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
-                          <span className="text-success font-bold">🚗 {multiSheetData.parqueaderos.length}</span>
-                          <span>Parqueaderos en consolidado</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+              <div className="space-y-1.5 max-h-[52vh] overflow-y-auto pr-1">
                 {columnasHoja
                   .filter((col) => col.trim() && !col.startsWith('__EMPTY'))
                   .map((colName) => {
                     const destinoActual = mapeo[colName] || 'ignorar';
-                    // Extraer primeros 2 ejemplos de valores de esa columna
                     const ejemplos = rawRows
                       .map((r) => String(r[colName] || '').trim())
                       .filter((val) => val.length > 0)
                       .slice(0, 2)
-                      .join(' • ');
+                      .join(' · ');
 
                     const isMapped = destinoActual !== 'ignorar';
 
                     return (
                       <div
                         key={colName}
-                        className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                          isMapped ? 'border-primary/30 bg-primary/5' : 'border-base-200 bg-base-200/20'
+                        className={`px-3 py-2 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors ${
+                          isMapped ? 'border-primary/20 bg-primary/5' : 'border-base-200 bg-base-200/20'
                         }`}
                       >
-                        {/* Columna en Excel */}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-base-content">{colName}</span>
-                            {isMapped && (
-                              <span className="badge badge-primary badge-xs text-3xs font-semibold">Mapeado</span>
-                            )}
-                          </div>
+                          <span className="text-xs font-semibold text-base-content">{colName}</span>
                           {ejemplos && (
                             <p className="text-2xs text-base-content/50 truncate pt-0.5">
-                              Ejemplos: {ejemplos}
+                              {ejemplos}
                             </p>
                           )}
                         </div>
 
-                        {/* Flecha indicadora */}
-                        <span className="icon-[tabler--chevron-right] text-base-content/30 hidden sm:block shrink-0" />
-
-                        {/* Dropdown de Destino */}
-                        <div className="sm:w-72 shrink-0">
+                        <div className="sm:w-64 shrink-0">
                           <select
                             value={destinoActual}
                             onChange={(e) => actualizarMapeoColumna(colName, e.target.value as CampoCensoDestino)}
-                            className="select select-sm select-bordered w-full text-xs font-medium"
+                            className="select select-xs select-bordered w-full text-xs font-medium"
                           >
                             {DESTINOS_OPCIONES.map((op) => (
                               <option key={op.valor} value={op.valor}>
@@ -865,49 +819,34 @@ export default function ModalCargaExcel({
               PASO 3: GRID INTERACTIVO DE PREVISUALIZACIÓN Y SANITIZACIÓN
               ========================================================================= */}
           {paso === 3 && (
-            <div className="space-y-4">
-              {/* Tarjetas de Resumen */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-center">
-                <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
-                  <div className="text-xl font-bold text-primary">{filasPreview.length}</div>
-                  <div className="text-2xs text-base-content/70">🏢 Unidades</div>
+            <div className="space-y-3">
+              {/* Barra de Resumen Compacta */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-lg bg-base-200/50 border border-base-200 text-xs">
+                <div className="flex flex-wrap items-center gap-3 text-base-content/80 font-medium">
+                  <span><strong className="text-base-content font-bold">{filasPreview.length}</strong> inmuebles</span>
+                  <span className="text-base-content/20">•</span>
+                  <span><strong className="text-base-content font-bold">{totalResidentesEnPreview}</strong> personas</span>
+                  <span className="text-base-content/20">•</span>
+                  <span><strong className="text-base-content font-bold">{parsedDataFinal?.parqueaderos?.length ?? 0}</strong> parqueaderos</span>
+                  <span className="text-base-content/20">•</span>
+                  <span><strong className="text-base-content font-bold">{parsedDataFinal?.vehiculos?.length ?? 0}</strong> vehículos</span>
+                  <span className="text-base-content/20">•</span>
+                  <span><strong className="text-base-content font-bold">{parsedDataFinal?.mascotas?.length ?? 0}</strong> mascotas</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20">
-                  <div className="text-xl font-bold text-accent">{totalResidentesEnPreview}</div>
-                  <div className="text-2xs text-base-content/70">👥 Personas</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-success/10 border border-success/20">
-                  <div className="text-xl font-bold text-success">{parsedDataFinal?.parqueaderos?.length ?? 0}</div>
-                  <div className="text-2xs text-base-content/70">🚗 Parqueaderos</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-info/10 border border-info/20">
-                  <div className="text-xl font-bold text-info">{parsedDataFinal?.vehiculos?.length ?? 0}</div>
-                  <div className="text-2xs text-base-content/70">🚘 Vehículos</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-secondary/10 border border-secondary/20">
-                  <div className="text-xl font-bold text-secondary">{parsedDataFinal?.mascotas?.length ?? 0}</div>
-                  <div className="text-2xs text-base-content/70">🐾 Mascotas</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-base-200 border border-base-300">
-                  <div className="text-xl font-bold text-base-content">
-                    {filasPreview.filter((f) => f.tipoOcupacion === 'habitada').length}
-                  </div>
-                  <div className="text-2xs text-base-content/70">🚪 Habitadas</div>
+                <div className="text-2xs text-base-content/60">
+                  {filasPreview.filter((f) => f.tipoOcupacion === 'habitada').length} habitadas · {filasPreview.filter((f) => f.tipoOcupacion === 'desocupada').length} desocupadas
                 </div>
               </div>
 
               {/* Advertencias Heurísticas */}
               {advertenciasSanitizacion.length > 0 && (
-                <div className="alert alert-warning text-xs space-y-0.5 py-2">
-                  <div className="font-semibold flex items-center gap-1.5">
-                    <span className="icon-[tabler--info-circle]" />
-                    Normalizaciones automáticas aplicadas:
-                  </div>
-                  <ul className="list-disc list-inside space-y-0.5 text-2xs">
-                    {advertenciasSanitizacion.slice(0, 3).map((adv, idx) => (
-                      <li key={idx}>{adv}</li>
+                <div className="alert alert-warning text-xs py-2 px-3 flex items-start gap-2">
+                  <span className="icon-[tabler--info-circle] text-base shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 text-2xs flex-1">
+                    {advertenciasSanitizacion.slice(0, 2).map((adv, idx) => (
+                      <div key={idx}>{adv}</div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
@@ -919,9 +858,9 @@ export default function ModalCargaExcel({
                     value={filtroBusqueda}
                     onChange={(e) => setFiltroBusqueda(e.target.value)}
                     placeholder="Buscar por apto, nombre o correo..."
-                    className="input input-sm input-bordered w-full text-xs pl-8"
+                    className="input input-xs input-bordered w-full text-xs pl-7"
                   />
-                  <span className="icon-[tabler--search] absolute left-2.5 top-2.5 text-base-content/40 text-xs" />
+                  <span className="icon-[tabler--search] absolute left-2 top-2 text-base-content/40 text-xs" />
                 </div>
                 <span className="text-2xs text-base-content/60">
                   Mostrando {filasFiltradas.length} de {filasPreview.length} registros
@@ -929,18 +868,18 @@ export default function ModalCargaExcel({
               </div>
 
               {/* Tabla Editable */}
-              <div className="border border-base-200 rounded-xl overflow-x-auto max-h-[45vh]">
+              <div className="border border-base-200 rounded-xl overflow-x-auto max-h-[48vh]">
                 <table className="table table-xs table-pin-rows">
                   <thead>
                     <tr className="bg-base-200/60 text-xs">
                       <th>Estado</th>
-                      <th>Apto / Casa</th>
+                      <th>Apto</th>
                       <th>Torre</th>
-                      <th>Coeficiente</th>
+                      <th>Coef.</th>
                       <th>Ocupación</th>
-                      <th>Residentes y Propietarios Desdoblados</th>
-                      <th>Contacto Limpio</th>
-                      <th>🚗 PQ / 🚘 Dotación</th>
+                      <th>Residentes</th>
+                      <th>Contacto</th>
+                      <th>Dotación</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -949,61 +888,61 @@ export default function ModalCargaExcel({
                         {/* Estado */}
                         <td>
                           {fila.estadoValidacion === 'valido' && (
-                            <span className="badge badge-success badge-xs text-3xs gap-1 font-semibold">
+                            <span className="badge badge-success badge-xs text-3xs font-semibold">
                               ✓ Válido
                             </span>
                           )}
                           {fila.estadoValidacion === 'advertencia' && (
-                            <span className="badge badge-warning badge-xs text-3xs gap-1 font-semibold" title={fila.mensajeValidacion}>
+                            <span className="badge badge-warning badge-xs text-3xs font-semibold" title={fila.mensajeValidacion}>
                               ⚠ Alerta
                             </span>
                           )}
                           {fila.estadoValidacion === 'error' && (
-                            <span className="badge badge-error badge-xs text-3xs gap-1 font-semibold" title={fila.mensajeValidacion}>
+                            <span className="badge badge-error badge-xs text-3xs font-semibold" title={fila.mensajeValidacion}>
                               ✕ Error
                             </span>
                           )}
                         </td>
 
                         {/* Número Apto (Editable) */}
-                        <td className="w-24">
+                        <td className="w-20">
                           <input
                             type="text"
                             value={fila.numeroApto}
                             onChange={(e) => actualizarFilaPreview(fila.id, 'numeroApto', e.target.value)}
-                            className="input input-2xs input-bordered w-20 font-bold"
+                            className="input input-2xs input-bordered w-16 font-bold"
                           />
                         </td>
 
                         {/* Torre (Editable) */}
-                        <td className="w-24">
+                        <td className="w-20">
                           <input
                             type="text"
                             value={fila.torre || ''}
                             onChange={(e) => actualizarFilaPreview(fila.id, 'torre', e.target.value)}
                             placeholder="Torre"
-                            className="input input-2xs input-bordered w-20 text-xs"
+                            className="input input-2xs input-bordered w-16 text-xs"
                           />
                         </td>
 
                         {/* Coeficiente (Editable) */}
-                        <td className="w-24">
+                        <td className="w-20">
                           <input
                             type="number"
                             step="0.0001"
                             value={fila.coeficiente !== undefined ? fila.coeficiente : ''}
                             onChange={(e) => actualizarFilaPreview(fila.id, 'coeficiente', parseFloat(e.target.value) || 0)}
                             placeholder="0.0000"
-                            className="input input-2xs input-bordered w-20 text-xs"
+                            className="input input-2xs input-bordered w-16 text-xs"
                           />
                         </td>
 
                         {/* Ocupación */}
-                        <td className="w-28">
+                        <td className="w-24">
                           <select
                             value={fila.tipoOcupacion}
                             onChange={(e) => actualizarFilaPreview(fila.id, 'tipoOcupacion', e.target.value)}
-                            className="select select-2xs select-bordered w-24 text-2xs"
+                            className="select select-2xs select-bordered w-22 text-2xs"
                           >
                             <option value="habitada">Habitada</option>
                             <option value="desocupada">Desocupada</option>
@@ -1014,19 +953,31 @@ export default function ModalCargaExcel({
                         <td className="max-w-xs">
                           {fila.personas.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                              {fila.personas.map((p, idx) => (
-                                <span
-                                  key={idx}
-                                  className={`badge badge-xs text-3xs ${
-                                    p.condicion === 'propietario'
-                                      ? 'badge-primary'
-                                      : 'badge-outline badge-secondary'
-                                  }`}
-                                  title={`${p.nombreCompleto} (${p.condicion})`}
-                                >
-                                  {p.nombreCompleto}
-                                </span>
-                              ))}
+                              {fila.personas.map((p, idx) => {
+                                let esMenor = false;
+                                if (p.fechaNacimiento) {
+                                  const nac = new Date(p.fechaNacimiento);
+                                  if (!isNaN(nac.getTime()) && new Date().getFullYear() - nac.getFullYear() < 18) {
+                                    esMenor = true;
+                                  }
+                                }
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={`badge badge-xs text-3xs ${
+                                      p.esContactoPrincipal
+                                        ? 'badge-primary font-semibold'
+                                        : p.condicion === 'propietario'
+                                          ? 'badge-secondary'
+                                          : 'badge-ghost text-base-content/70'
+                                    }`}
+                                    title={`${p.nombreCompleto} (${p.condicion}${esMenor ? ' · menor' : ''}${p.esContactoPrincipal ? ' · contacto principal' : ''})`}
+                                  >
+                                    {p.nombreCompleto}
+                                    {esMenor ? ' (menor)' : ''}
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-2xs text-base-content/40 italic">
@@ -1041,7 +992,7 @@ export default function ModalCargaExcel({
                             <div className="text-primary truncate">{fila.emailsExtraidos.join(', ')}</div>
                           )}
                           {fila.telefonosExtraidos.length > 0 && (
-                            <div className="text-base-content/60 truncate">{fila.telefonosExtraidos.join(' • ')}</div>
+                            <div className="text-base-content/60 truncate">{fila.telefonosExtraidos.join(' · ')}</div>
                           )}
                         </td>
 
@@ -1056,7 +1007,7 @@ export default function ModalCargaExcel({
                             {Boolean(fila.vehiculosCount && fila.vehiculosCount > 0) && (
                               <span
                                 className="badge badge-info badge-outline badge-xs text-3xs font-semibold gap-0.5 cursor-help"
-                                title={fila.vehiculosResumen?.join(' • ')}
+                                title={fila.vehiculosResumen?.join(' · ')}
                               >
                                 🚘 {fila.vehiculosCount} veh
                               </span>
@@ -1064,7 +1015,7 @@ export default function ModalCargaExcel({
                             {Boolean(fila.mascotasCount && fila.mascotasCount > 0) && (
                               <span
                                 className="badge badge-secondary badge-outline badge-xs text-3xs font-semibold gap-0.5 cursor-help"
-                                title={fila.mascotasResumen?.join(' • ')}
+                                title={fila.mascotasResumen?.join(' · ')}
                               >
                                 🐾 {fila.mascotasCount} masc
                               </span>
@@ -1088,52 +1039,38 @@ export default function ModalCargaExcel({
               PASO 4: PANTALLA DE ÉXITO FINAL
               ========================================================================= */}
           {paso === 4 && resultado && (
-            <div className="text-center py-6 space-y-4">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/15 text-success">
-                <span className="icon-[tabler--circle-check] text-4xl" />
+            <div className="text-center py-8 space-y-4">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-success">
+                <span className="icon-[tabler--circle-check] text-3xl" />
               </div>
-              <h3 className="text-xl font-bold text-base-content">
-                ¡Carga Masiva Exitosa con Normalización!
+              <h3 className="text-lg font-bold text-base-content">
+                Censo Importado con Éxito
               </h3>
-              <p className="text-sm text-base-content/70 max-w-md mx-auto">
-                La base de datos del conjunto ha sido actualizada correctamente. Todos los datos compuestos fueron
-                sanitizados y guardados limpiamente.
+              <p className="text-xs text-base-content/70 max-w-sm mx-auto">
+                La información del censo y las dotaciones asociadas se registraron correctamente.
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-center pt-2 max-w-lg mx-auto">
-                <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
-                  <div className="text-2xl font-bold text-primary">{resultado.inmueblesCreados}</div>
-                  <div className="text-2xs text-base-content/70">Nuevos Inmuebles</div>
-                </div>
-                <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
-                  <div className="text-2xl font-bold text-secondary">{resultado.inmueblesActualizados}</div>
-                  <div className="text-2xs text-base-content/70">Actualizados</div>
-                </div>
-                <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
-                  <div className="text-2xl font-bold text-accent">{resultado.residentesProcesados}</div>
-                  <div className="text-2xs text-base-content/70">Residentes Censados</div>
-                </div>
-                {resultado.parqueaderosProcesados > 0 && (
-                  <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
-                    <div className="text-2xl font-bold text-success">{resultado.parqueaderosProcesados}</div>
-                    <div className="text-2xs text-base-content/70">Parqueaderos Asignados</div>
-                  </div>
-                )}
+              <div className="p-3 rounded-xl bg-base-200/50 border border-base-200 max-w-md mx-auto text-xs flex flex-wrap items-center justify-center gap-3 font-medium text-base-content/80">
+                <span><strong>{resultado.inmueblesCreados + resultado.inmueblesActualizados}</strong> inmuebles</span>
+                <span>•</span>
+                <span><strong>{resultado.residentesProcesados}</strong> personas</span>
+                <span>•</span>
+                <span><strong>{resultado.parqueaderosProcesados}</strong> parqueaderos</span>
                 {Boolean(resultado.vehiculosProcesados && resultado.vehiculosProcesados > 0) && (
-                  <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
-                    <div className="text-2xl font-bold text-info">{resultado.vehiculosProcesados}</div>
-                    <div className="text-2xs text-base-content/70">Vehículos Registrados</div>
-                  </div>
+                  <>
+                    <span>•</span>
+                    <span><strong>{resultado.vehiculosProcesados}</strong> vehículos</span>
+                  </>
                 )}
                 {Boolean(resultado.mascotasProcesadas && resultado.mascotasProcesadas > 0) && (
-                  <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
-                    <div className="text-2xl font-bold text-warning">{resultado.mascotasProcesadas}</div>
-                    <div className="text-2xs text-base-content/70">Mascotas Registradas</div>
-                  </div>
+                  <>
+                    <span>•</span>
+                    <span><strong>{resultado.mascotasProcesadas}</strong> mascotas</span>
+                  </>
                 )}
               </div>
 
-              <div className="pt-4 flex justify-center gap-3">
+              <div className="pt-2 flex justify-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -1142,11 +1079,11 @@ export default function ModalCargaExcel({
                     setLibro(null);
                     setResultado(null);
                   }}
-                  className="btn btn-sm btn-outline"
+                  className="btn btn-xs btn-outline"
                 >
                   Cargar otro archivo
                 </button>
-                <button type="button" onClick={handleCerrar} className="btn btn-sm btn-primary">
+                <button type="button" onClick={handleCerrar} className="btn btn-xs btn-primary">
                   Aceptar y Finalizar
                 </button>
               </div>
@@ -1156,20 +1093,20 @@ export default function ModalCargaExcel({
 
         {/* Pie de Acciones / Navegación */}
         {paso < 4 && (
-          <div className="p-4 border-t border-base-content/10 flex items-center justify-between gap-2 shrink-0 bg-base-100">
+          <div className="px-5 py-3 border-t border-base-200 flex items-center justify-between gap-2 shrink-0 bg-base-100">
             {paso === 1 && (
               <>
-                <button type="button" onClick={handleCerrar} className="btn btn-sm btn-ghost">
+                <button type="button" onClick={handleCerrar} className="btn btn-xs btn-ghost">
                   Cancelar
                 </button>
                 <button
                   type="button"
                   disabled={!file || !hojaSeleccionada || loading}
                   onClick={avanzarAPaso2}
-                  className="btn btn-sm btn-primary gap-1.5"
+                  className="btn btn-xs btn-primary gap-1"
                 >
-                  <span>Continuar al Mapeo de Columnas</span>
-                  <span className="icon-[tabler--chevron-right] text-sm" />
+                  <span>Continuar</span>
+                  <span className="icon-[tabler--chevron-right] text-xs" />
                 </button>
               </>
             )}
@@ -1179,18 +1116,18 @@ export default function ModalCargaExcel({
                 <button
                   type="button"
                   onClick={() => setPaso(1)}
-                  className="btn btn-sm btn-outline gap-1"
+                  className="btn btn-xs btn-outline gap-1"
                 >
-                  <span className="icon-[tabler--chevron-left] text-sm" />
+                  <span className="icon-[tabler--chevron-left] text-xs" />
                   <span>Atrás</span>
                 </button>
                 <button
                   type="button"
                   onClick={avanzarAPaso3}
-                  className="btn btn-sm btn-primary gap-1.5"
+                  className="btn btn-xs btn-primary gap-1"
                 >
-                  <span>Continuar a Vista Previa</span>
-                  <span className="icon-[tabler--chevron-right] text-sm" />
+                  <span>Continuar</span>
+                  <span className="icon-[tabler--chevron-right] text-xs" />
                 </button>
               </>
             )}
@@ -1201,21 +1138,21 @@ export default function ModalCargaExcel({
                   type="button"
                   disabled={submitting}
                   onClick={() => setPaso(2)}
-                  className="btn btn-sm btn-outline gap-1"
+                  className="btn btn-xs btn-outline gap-1"
                 >
-                  <span className="icon-[tabler--chevron-left] text-sm" />
+                  <span className="icon-[tabler--chevron-left] text-xs" />
                   <span>Ajustar Mapeo</span>
                 </button>
                 <button
                   type="button"
                   disabled={submitting || filasPreview.length === 0}
                   onClick={handleImportarDefinitivo}
-                  className="btn btn-sm btn-primary gap-1.5"
+                  className="btn btn-xs btn-primary gap-1.5"
                 >
                   {submitting && <span className="loading loading-spinner loading-xs" />}
-                  <span className="icon-[tabler--database-import] text-base" />
+                  <span className="icon-[tabler--database-import] text-xs" />
                   <span>
-                    Confirmar e Importar {filasPreview.length} Unidades ({totalResidentesEnPreview} Residentes)
+                    Importar Censo ({filasPreview.length} unidades)
                   </span>
                 </button>
               </>
