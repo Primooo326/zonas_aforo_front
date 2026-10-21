@@ -131,6 +131,9 @@ export default function PublicCensoPage() {
   const [tieneVehiculos, setTieneVehiculos] = useState(false);
   const [vehiculos, setVehiculos] = useState<VehiculoForm[]>([]);
 
+  // 5. Contraseña opcional para portal de residentes
+  const [portalPassword, setPortalPassword] = useState('');
+
   // Parqueaderos disponibles
   const [parqueaderosInventario, setParqueaderosInventario] = useState<ParqueaderoOpcion[]>([]);
 
@@ -498,6 +501,7 @@ export default function PublicCensoPage() {
           personas: personasValidas,
           mascotas: tieneMascotas ? mascotas.filter((m) => m.nombre.trim()) : [],
           vehiculos: tieneVehiculos ? vehiculos.filter((v) => v.placa.trim()) : [],
+          password: portalPassword.trim() || undefined,
         }),
       });
 
@@ -530,6 +534,14 @@ export default function PublicCensoPage() {
           <p className="text-sm text-base-content/70">
             La información de tu apartamento ha sido enviada a la administración de <strong>{edificioNombre}</strong>. Los datos serán validados e incorporados al registro oficial de la copropiedad.
           </p>
+          {portalPassword && (
+            <div className="p-3 bg-primary/10 rounded-xl text-xs text-primary font-medium text-left space-y-1">
+              <p className="font-bold">🔐 Cuenta de Portal de Residentes Creada</p>
+              <p className="text-base-content/80">
+                Tu cuenta de residente se encuentra en estado <strong>pendiente de aprobación</strong>. Cuando la administración valide los datos de tu vivienda, quedará activa de inmediato para ingresar en <a href="/portal/login" className="underline font-bold text-primary">/portal/login</a>.
+              </p>
+            </div>
+          )}
           <div className="pt-2">
             <button
               onClick={() => {
@@ -1230,6 +1242,26 @@ export default function PublicCensoPage() {
                 </button>
               </div>
             )}
+
+            {/* Acceso opcional al portal de residentes */}
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-2 mt-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                <span className="text-2xs font-bold uppercase tracking-wider text-primary">
+                  Crea tu acceso al Portal de Residentes (Recomendado)
+                </span>
+              </div>
+              <p className="text-2xs text-base-content/70 leading-relaxed">
+                Define una contraseña para acceder a gestionar tu hogar y reservar zonas comunes una vez la administración valide tu censo:
+              </p>
+              <input
+                type="password"
+                value={portalPassword}
+                onChange={(e) => setPortalPassword(e.target.value)}
+                placeholder="Contraseña para el portal (mínimo 6 caracteres)"
+                className="input input-bordered input-sm rounded-lg w-full text-xs"
+              />
+            </div>
 
             <div className="p-4 rounded-lg bg-base-200/60 border arch-border space-y-2 text-xs mt-4">
               <span className="text-2xs font-bold uppercase tracking-wider text-primary block">

@@ -271,6 +271,30 @@ export default function CensoDashboardPage() {
     }
   };
 
+
+  const invitarAlPortal = async (u: CensoUnidad) => {
+    try {
+      const res = await apiFetch('/censo/invitaciones', {
+        method: 'POST',
+        body: JSON.stringify({ diasValidez: 7, inmueblePredefinido: u.identificador }),
+      });
+      const url = `${window.location.origin}/portal/registro?token=${res.token}`;
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+      const mensaje = `Hola! Te compartimos el enlace oficial al Portal de Residentes para ${u.identificador}: ${url}`;
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+      const abrirWa = confirm(
+        `¡Enlace de invitación generado y copiado al portapapeles!\n\n${url}\n\n¿Deseas abrir WhatsApp para enviárselo al residente?`
+      );
+      if (abrirWa) {
+        window.open(waUrl, '_blank');
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Error al generar invitación al portal');
+    }
+  };
+
   const toggleTagInmueble = async (u: CensoUnidad, tag: string) => {
     const tagsActuales = u.tags || [];
     const nuevo = tagsActuales.includes(tag)
@@ -1522,6 +1546,15 @@ export default function CensoDashboardPage() {
                                 aria-label={esMoroso ? 'Quitar tag Moroso' : 'Marcar como Moroso'}
                               >
                                 <span className="icon-[tabler--tag] text-base" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => invitarAlPortal(u)}
+                                className="inline-flex items-center justify-center w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-lg border text-sm transition-all bg-base-200 text-base-content/70 border-base-300 hover:text-primary hover:border-primary/40"
+                                title="Generar invitación al Portal de Residentes"
+                                aria-label="Generar invitación al Portal de Residentes"
+                              >
+                                <span className="icon-[tabler--user-plus] text-base" />
                               </button>
                             </BotoneraAccionesTabla>
                           </td>

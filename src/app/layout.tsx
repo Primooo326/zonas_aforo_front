@@ -4,6 +4,7 @@ import "./globals.css";
 import FlyonuiScript from "@/components/FlyonuiScript";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ResidentAuthProvider } from "@/contexts/ResidentAuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,7 +42,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
       </head>
       <body className="min-h-full flex flex-col bg-base-200">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ResidentAuthProvider>
+            {children}
+          </ResidentAuthProvider>
+        </AuthProvider>
         <FlyonuiScript />
         <ServiceWorkerRegister />
       </body>
