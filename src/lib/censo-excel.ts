@@ -96,9 +96,11 @@ export type CampoCensoDestino =
   | 'nombrePropietario'
   | 'residentes'
   | 'documento'
+  | 'edad'
   | 'fechaNacimiento'
   | 'email'
   | 'telefono'
+  | 'parqueadero'
   | 'tipoOcupacion'
   | 'cuartos'
   | 'banos'
@@ -120,6 +122,14 @@ export interface LibroExcelAnalizado {
   hojaRecomendada: string;
   hojasOperativasDetectadas: string[];
   esPlantillaOficial: boolean;
+  esConsolidadoCopropiedad?: boolean;
+  hojasConsolidadoDetectadas?: {
+    propietarios?: string;
+    autorizados?: string;
+    vehiculos?: string;
+    mascotas?: string;
+    arrendatarios?: string;
+  };
 }
 
 export interface PersonaPreviewItem {
@@ -142,6 +152,7 @@ export interface FilaSanitizadaPreview {
   personas: PersonaPreviewItem[];
   emailsExtraidos: string[];
   telefonosExtraidos: string[];
+  parqueaderos?: string[];
   estadoValidacion: 'valido' | 'advertencia' | 'error';
   mensajeValidacion?: string;
 }
@@ -266,17 +277,41 @@ export async function analizarLibroExcel(file: File): Promise<LibroExcelAnalizad
   });
 
   // Identificar si contiene la plantilla oficial ("Inmuebles" o "Unidades")
+  const normSheet = (n: string) => n.trim().toLowerCase();
   const esPlantillaOficial = hojas.some(
-    (h) => h.nombre.trim().toLowerCase() === 'inmuebles' || h.nombre.trim().toLowerCase() === 'unidades',
+    (h) => normSheet(h.nombre) === 'inmuebles' || normSheet(h.nombre) === 'unidades',
   );
+
+  // Identificar si es un libro consolidado de copropiedad multi-hoja
+  // (combina hojas temáticas: Propietarios, Autorizados, Mascotas, Vehículos, Arrendatarios)
+  const hojaProp = hojas.find((h) => /^propietari|^titular|^apartamento|^unidad/i.test(normSheet(h.nombre)));
+  const hojaAut = hojas.find((h) => /^autoriz|^residente|^habitante|^conviviente/i.test(normSheet(h.nombre)));
+  const hojaVeh = hojas.find((h) => (/vehic|carro|moto/i.test(normSheet(h.nombre)) || /\bauto\b|\bautomov/i.test(normSheet(h.nombre))) && !normSheet(h.nombre).includes('autoriz'));
+  const hojaMas = hojas.find((h) => /^mascot|^animal/i.test(normSheet(h.nombre)));
+  const hojaArr = hojas.find((h) => /^arrend|^inquilin/i.test(normSheet(h.nombre)));
+
+  const entidadesCopropiedadCount = [hojaProp, hojaAut, hojaVeh, hojaMas, hojaArr].filter(Boolean).length;
+  const esConsolidadoCopropiedad = entidadesCopropiedadCount >= 2;
+
+  const hojasConsolidadoDetectadas = esConsolidadoCopropiedad
+    ? {
+        propietarios: hojaProp?.nombre,
+        autorizados: hojaAut?.nombre,
+        vehiculos: hojaVeh?.nombre,
+        mascotas: hojaMas?.nombre,
+        arrendatarios: hojaArr?.nombre,
+      }
+    : undefined;
 
   // Determinar la hoja recomendada
   let hojaRecomendada = '';
   if (esPlantillaOficial) {
     const official = hojas.find(
-      (h) => h.nombre.trim().toLowerCase() === 'inmuebles' || h.nombre.trim().toLowerCase() === 'unidades',
+      (h) => normSheet(h.nombre) === 'inmuebles' || normSheet(h.nombre) === 'unidades',
     );
     hojaRecomendada = official?.nombre || wb.SheetNames[0];
+  } else if (esConsolidadoCopropiedad && hojaProp) {
+    hojaRecomendada = hojaProp.nombre;
   } else {
     // Buscar hoja que contenga palabras clave residenciales y no sea operativa
     const candidata = hojas.find(
@@ -298,6 +333,8 @@ export async function analizarLibroExcel(file: File): Promise<LibroExcelAnalizad
     hojaRecomendada,
     hojasOperativasDetectadas,
     esPlantillaOficial,
+    esConsolidadoCopropiedad,
+    hojasConsolidadoDetectadas,
   };
 }
 
@@ -324,6 +361,7 @@ export function sugerirMapeoColumnas(columnas: string[]): Record<string, CampoCe
 
   columnas.forEach((col) => {
     const colTrimmed = col.trim();
+    if (!colTrimmed) return;
 
     // 1. Número de Apto / Casa
     if (!assignedTargets.has('numeroApto') && matches(colTrimmed, ['apto', 'apartamento', 'aptocasa', 'casa', 'inmueble', 'numero', 'unidad', 'nro'])) {
@@ -346,24 +384,24 @@ export function sugerirMapeoColumnas(columnas: string[]): Record<string, CampoCe
       return;
     }
 
-    // 4. Correo
+    // 4. Parqueadero Asignado
+    if (!assignedTargets.has('parqueadero') && matches(colTrimmed, ['parqueadero', 'garaje', 'estacionamiento', 'numparqueadero', 'pq'])) {
+      mapeo[colTrimmed] = 'parqueadero';
+      assignedTargets.add('parqueadero');
+      return;
+    }
+
+    // 5. Correo
     if (!assignedTargets.has('email') && matches(colTrimmed, ['correo', 'correos', 'email', 'mail'])) {
       mapeo[colTrimmed] = 'email';
       assignedTargets.add('email');
       return;
     }
 
-    // 5. Teléfono
+    // 6. Teléfono
     if (!assignedTargets.has('telefono') && matches(colTrimmed, ['telefono', 'telefonos', 'celular', 'cel', 'movil', 'tel'])) {
       mapeo[colTrimmed] = 'telefono';
       assignedTargets.add('telefono');
-      return;
-    }
-
-    // 6. Residentes
-    if (!assignedTargets.has('residentes') && matches(colTrimmed, ['residentes', 'residente', 'habitantes', 'inquilinos', 'arrendatarios'])) {
-      mapeo[colTrimmed] = 'residentes';
-      assignedTargets.add('residentes');
       return;
     }
 
@@ -374,45 +412,59 @@ export function sugerirMapeoColumnas(columnas: string[]): Record<string, CampoCe
       return;
     }
 
-    // 8. Ocupación
+    // 8. Residentes
+    if (!assignedTargets.has('residentes') && matches(colTrimmed, ['residentes', 'residente', 'autorizados', 'habitantes', 'inquilinos', 'arrendatarios'])) {
+      mapeo[colTrimmed] = 'residentes';
+      assignedTargets.add('residentes');
+      return;
+    }
+
+    // 9. Documento / Cédula / Identificación
+    if (!assignedTargets.has('documento') && matches(colTrimmed, ['documento', 'cedula', 'identificacion', 'cc', 'nit', 'doc', 'id'])) {
+      mapeo[colTrimmed] = 'documento';
+      assignedTargets.add('documento');
+      return;
+    }
+
+    // 10. Edad
+    if (!assignedTargets.has('edad') && matches(colTrimmed, ['edad', 'age', 'anios', 'anos'])) {
+      mapeo[colTrimmed] = 'edad';
+      assignedTargets.add('edad');
+      return;
+    }
+
+    // 11. Fecha de Nacimiento
+    if (!assignedTargets.has('fechaNacimiento') && matches(colTrimmed, ['fechanacimiento', 'nacimiento', 'fechanac', 'cumpleanos'])) {
+      mapeo[colTrimmed] = 'fechaNacimiento';
+      assignedTargets.add('fechaNacimiento');
+      return;
+    }
+
+    // 12. Ocupación
     if (!assignedTargets.has('tipoOcupacion') && matches(colTrimmed, ['ocupacion', 'estadoocupacion', 'tipoocupacion'])) {
       mapeo[colTrimmed] = 'tipoOcupacion';
       assignedTargets.add('tipoOcupacion');
       return;
     }
 
-    // 9. Cuartos
+    // 13. Cuartos
     if (!assignedTargets.has('cuartos') && matches(colTrimmed, ['cuartos', 'habitaciones', 'alcobas', 'hab'])) {
       mapeo[colTrimmed] = 'cuartos';
       assignedTargets.add('cuartos');
       return;
     }
 
-    // 10. Baños
+    // 14. Baños
     if (!assignedTargets.has('banos') && matches(colTrimmed, ['banos', 'bano'])) {
       mapeo[colTrimmed] = 'banos';
       assignedTargets.add('banos');
       return;
     }
 
-    // 11. Metros
+    // 15. Metros
     if (!assignedTargets.has('metrosCuadrados') && matches(colTrimmed, ['metros', 'm2', 'area', 'superficie'])) {
       mapeo[colTrimmed] = 'metrosCuadrados';
       assignedTargets.add('metrosCuadrados');
-      return;
-    }
-
-    // 12. Documento / Cédula
-    if (!assignedTargets.has('documento') && matches(colTrimmed, ['documento', 'cedula', 'identificacion', 'cc', 'nit'])) {
-      mapeo[colTrimmed] = 'documento';
-      assignedTargets.add('documento');
-      return;
-    }
-
-    // 13. Fecha de Nacimiento
-    if (!assignedTargets.has('fechaNacimiento') && matches(colTrimmed, ['fechanacimiento', 'nacimiento', 'fechanac', 'cumpleanos'])) {
-      mapeo[colTrimmed] = 'fechaNacimiento';
-      assignedTargets.add('fechaNacimiento');
       return;
     }
 
@@ -430,20 +482,39 @@ export function transformarHojaExcel(
   rawRows: Record<string, unknown>[],
   mapeo: Record<string, CampoCensoDestino>,
 ): ResultadoTransformacionHoja {
-  const inmuebles: ImportarInmuebleItem[] = [];
-  const residentes: ImportarResidenteItem[] = [];
-  const filasPreview: FilaSanitizadaPreview[] = [];
   const advertencias: string[] = [];
   const errores: string[] = [];
+  const parqueaderosExtraidos: ImportarParqueaderoItem[] = [];
+
+  // Mapa de unidades consolidadas por clave única (torre + apto)
+  const unidadesMap = new Map<
+    string,
+    {
+      filaOriginalNum: number;
+      rawApto: string;
+      torre?: string;
+      coeficiente?: number;
+      tipoOcupacion: 'habitada' | 'desocupada';
+      cuartos?: number;
+      banos?: number;
+      metrosCuadrados?: number;
+      personas: PersonaPreviewItem[];
+      emailsExtraidos: string[];
+      telefonosExtraidos: string[];
+      parqueaderos: string[];
+    }
+  >();
 
   rawRows.forEach((row, idx) => {
     const filaNum = idx + 2;
 
-    // Obtener valor según el campo mapeado
+    // Obtener valor según el campo mapeado (búsqueda insensible a espacios en cabeceras)
     const getMappedVal = (target: CampoCensoDestino): unknown => {
       for (const [colName, mappedTarget] of Object.entries(mapeo)) {
         if (mappedTarget === target) {
-          return row[colName];
+          if (row[colName] !== undefined && row[colName] !== '') return row[colName];
+          const trimmedKey = Object.keys(row).find((k) => k.trim().toLowerCase() === colName.trim().toLowerCase());
+          if (trimmedKey && row[trimmedKey] !== undefined && row[trimmedKey] !== '') return row[trimmedKey];
         }
       }
       return undefined;
@@ -451,10 +522,10 @@ export function transformarHojaExcel(
 
     const rawApto = String(getMappedVal('numeroApto') || '').trim();
 
-    // 1. Omitir filas vacías o filas de sumatoria total (ej. Apto vacío o que contenga "Total")
+    // 1. Omitir filas vacías o de sumatoria total
     if (!rawApto) {
       const rowText = Object.values(row).join(' ').toLowerCase();
-      if (rowText.includes('total') || rowText.includes('100') || rowText.includes('suma')) {
+      if (rowText.includes('total') || rowText.includes('suma')) {
         advertencias.push(`Fila ${filaNum}: Omitida automáticamente por identificarse como fila de sumatoria/total.`);
       }
       return;
@@ -463,7 +534,6 @@ export function transformarHojaExcel(
     // 2. Extraer y normalizar Torre
     let torre = String(getMappedVal('torre') || '').trim();
     if (!torre) {
-      // Inferencia inteligente de torre por primer dígito si apto tiene 4 cifras (ej. 1101 -> Torre 1, 2101 -> Torre 2)
       if (/^[1-9]\d{3}$/.test(rawApto)) {
         torre = `Torre ${rawApto[0]}`;
       }
@@ -471,11 +541,12 @@ export function transformarHojaExcel(
       torre = normalizarTorre(torre);
     }
 
+    const unitKey = `${normalizarTorre(torre).toLowerCase()}___${rawApto.toLowerCase()}`;
+
     // 3. Extraer y normalizar Coeficiente
     const rawCoef = parseNumber(getMappedVal('coeficiente'));
     let coeficiente: number | undefined = undefined;
     if (rawCoef !== undefined) {
-      // Si viene en escala porcentual > 1 (ej. 2.73), convertir a escala decimal (0.0273)
       coeficiente = rawCoef > 1 ? Math.round((rawCoef / 100) * 100000) / 100000 : rawCoef;
     }
 
@@ -487,13 +558,14 @@ export function transformarHojaExcel(
       rawResidentesText.toLowerCase().includes('desocupado') ||
       rawResidentesText.toLowerCase().includes('vacio') ||
       rawResidentesText.toLowerCase().includes('vacío');
-
     const tipoOcupacion: 'habitada' | 'desocupada' = isDesocupado ? 'desocupada' : 'habitada';
 
-    // 5. Extracción de Correos, Teléfonos, Documento y Fecha de Nacimiento
-    const emailsExtraidos = cleanEmails(getMappedVal('email'));
-    const telefonosExtraidos = cleanPhones(getMappedVal('telefono'));
+    // 5. Extracción de Correos, Teléfonos y Documento
+    const emailsFila = cleanEmails(getMappedVal('email'));
+    const telefonosFila = cleanPhones(getMappedVal('telefono'));
     const rawDocumento = String(getMappedVal('documento') || '').trim() || undefined;
+
+    // Fecha de Nacimiento o Edad
     const rawFechaNacVal = getMappedVal('fechaNacimiento');
     let fechaNacExtraida: string | undefined = undefined;
     if (rawFechaNacVal instanceof Date) {
@@ -514,70 +586,145 @@ export function transformarHojaExcel(
       }
     }
 
-    // 6. Desdoblamiento de Personas (Propietarios + Residentes)
+    const rawEdad = parseNumber(getMappedVal('edad'));
+    if (!fechaNacExtraida && rawEdad !== undefined && rawEdad >= 0 && rawEdad <= 120) {
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - Math.floor(rawEdad);
+      fechaNacExtraida = `${birthYear}-01-01`;
+    }
+
+    // Parqueadero asignado en la fila
+    const rawParq = String(getMappedVal('parqueadero') || '').trim();
+
+    // Desdoblamiento de Personas
     const rawPropietarioText = String(getMappedVal('nombrePropietario') || '');
     const ownerNames = splitNamesCompound(rawPropietarioText);
     const residentNames = isDesocupado ? [] : splitNamesCompound(rawResidentesText);
 
-    const personas: PersonaPreviewItem[] = [];
-    const addedNames = new Set<string>();
+    // Si la unidad no existía aún en el mapa, inicializarla
+    if (!unidadesMap.has(unitKey)) {
+      unidadesMap.set(unitKey, {
+        filaOriginalNum: filaNum,
+        rawApto,
+        torre: torre || undefined,
+        coeficiente,
+        tipoOcupacion,
+        cuartos: parseNumber(getMappedVal('cuartos')),
+        banos: parseNumber(getMappedVal('banos')),
+        metrosCuadrados: parseNumber(getMappedVal('metrosCuadrados')),
+        personas: [],
+        emailsExtraidos: [],
+        telefonosExtraidos: [],
+        parqueaderos: [],
+      });
+    }
+
+    const unidad = unidadesMap.get(unitKey)!;
+
+    // Completar datos físicos si la primera fila no los tenía
+    if (coeficiente !== undefined && unidad.coeficiente === undefined) unidad.coeficiente = coeficiente;
+    if (rawParq && !unidad.parqueaderos.includes(rawParq)) {
+      unidad.parqueaderos.push(rawParq);
+      parqueaderosExtraidos.push({
+        numeroParqueadero: rawParq,
+        torreAsignada: torre || undefined,
+        aptoAsignado: rawApto,
+        tipo: 'carro',
+        esCubierto: true,
+      });
+    }
+
+    // Acumular correos y teléfonos
+    emailsFila.forEach((em) => {
+      if (!unidad.emailsExtraidos.includes(em)) unidad.emailsExtraidos.push(em);
+    });
+    telefonosFila.forEach((tel) => {
+      if (!unidad.telefonosExtraidos.includes(tel)) unidad.telefonosExtraidos.push(tel);
+    });
 
     let emailIdx = 0;
     let telIdx = 0;
 
     // Agregar propietarios
-    ownerNames.forEach((n, i) => {
-      const key = n.toLowerCase();
-      if (!addedNames.has(key)) {
-        addedNames.add(key);
-        personas.push({
+    ownerNames.forEach((n) => {
+      const yaExiste = unidad.personas.some((p) => p.nombreCompleto.toLowerCase() === n.toLowerCase());
+      if (!yaExiste) {
+        const esPrimerContacto = unidad.personas.length === 0;
+        unidad.personas.push({
           nombreCompleto: n,
           condicion: 'propietario',
-          esContactoPrincipal: i === 0,
-          documento: i === 0 ? rawDocumento : undefined,
-          fechaNacimiento: i === 0 ? fechaNacExtraida : undefined,
-          email: emailsExtraidos[emailIdx++] || undefined,
-          telefono: telefonosExtraidos[telIdx++] || undefined,
+          esContactoPrincipal: esPrimerContacto,
+          documento: rawDocumento,
+          fechaNacimiento: fechaNacExtraida,
+          email: emailsFila[emailIdx++] || undefined,
+          telefono: telefonosFila[telIdx++] || undefined,
         });
       }
     });
 
     // Agregar residentes
     residentNames.forEach((n) => {
-      const key = n.toLowerCase();
-      if (!addedNames.has(key)) {
-        addedNames.add(key);
-        const isFirst = personas.length === 0;
-        personas.push({
+      const yaExiste = unidad.personas.some((p) => p.nombreCompleto.toLowerCase() === n.toLowerCase());
+      if (!yaExiste) {
+        const esPrimerContacto = unidad.personas.length === 0;
+        unidad.personas.push({
           nombreCompleto: n,
           condicion: 'conviviente',
-          esContactoPrincipal: isFirst,
-          documento: isFirst ? rawDocumento : undefined,
-          fechaNacimiento: isFirst ? fechaNacExtraida : undefined,
-          email: emailsExtraidos[emailIdx++] || undefined,
-          telefono: telefonosExtraidos[telIdx++] || undefined,
+          esContactoPrincipal: esPrimerContacto,
+          documento: rawDocumento,
+          fechaNacimiento: fechaNacExtraida,
+          email: emailsFila[emailIdx++] || undefined,
+          telefono: telefonosFila[telIdx++] || undefined,
         });
       }
     });
 
-    // Si no hubo nombres pero hay emails o teléfonos, registrar titular por defecto
-    if (personas.length === 0 && !isDesocupado && (emailsExtraidos.length > 0 || telefonosExtraidos.length > 0)) {
-      personas.push({
+    // Si no hubo nombres pero hay emails o teléfonos, y la unidad aún no tiene personas
+    if (unidad.personas.length === 0 && !isDesocupado && (emailsFila.length > 0 || telefonosFila.length > 0)) {
+      unidad.personas.push({
         nombreCompleto: `Residente Apto ${rawApto}`,
         condicion: 'conviviente',
         esContactoPrincipal: true,
         documento: rawDocumento,
         fechaNacimiento: fechaNacExtraida,
-        email: emailsExtraidos[0],
-        telefono: telefonosExtraidos[0],
+        email: emailsFila[0],
+        telefono: telefonosFila[0],
       });
     }
+  });
 
-    // 7. Generar registros para ImportarResidenteItem
-    personas.forEach((p) => {
+  // Construir inmuebles, residentes y filasPreview finales a partir del mapa consolidado
+  const inmuebles: ImportarInmuebleItem[] = [];
+  const residentes: ImportarResidenteItem[] = [];
+  const filasPreview: FilaSanitizadaPreview[] = [];
+
+  for (const [key, unidad] of unidadesMap.entries()) {
+    // Garantizar que EXACTAMENTE una persona sea contacto principal
+    let tienePrincipal = false;
+    unidad.personas.forEach((p) => {
+      if (p.esContactoPrincipal) {
+        if (!tienePrincipal) tienePrincipal = true;
+        else p.esContactoPrincipal = false;
+      }
+    });
+    if (!tienePrincipal && unidad.personas.length > 0) {
+      unidad.personas[0].esContactoPrincipal = true;
+    }
+
+    inmuebles.push({
+      torre: unidad.torre,
+      numeroApto: unidad.rawApto,
+      coeficiente: unidad.coeficiente,
+      tipoOcupacion: unidad.tipoOcupacion,
+      cuartos: unidad.cuartos,
+      banos: unidad.banos,
+      metrosCuadrados: unidad.metrosCuadrados,
+    });
+
+    unidad.personas.forEach((p) => {
       residentes.push({
-        torre: torre || undefined,
-        apto: rawApto,
+        torre: unidad.torre,
+        apto: unidad.rawApto,
         nombreCompleto: p.nombreCompleto,
         documento: p.documento,
         condicion: p.condicion,
@@ -588,50 +735,35 @@ export function transformarHojaExcel(
       });
     });
 
-    // 8. Atributos físicos opcionales
-    const cuartos = parseNumber(getMappedVal('cuartos'));
-    const banos = parseNumber(getMappedVal('banos'));
-    const metrosCuadrados = parseNumber(getMappedVal('metrosCuadrados'));
-
-    inmuebles.push({
-      torre: torre || undefined,
-      numeroApto: rawApto,
-      coeficiente,
-      tipoOcupacion,
-      cuartos,
-      banos,
-      metrosCuadrados,
-    });
-
-    // 9. Estado de validación para la vista previa
     let estadoValidacion: 'valido' | 'advertencia' | 'error' = 'valido';
     let mensajeValidacion = '';
 
-    if (!rawApto) {
+    if (!unidad.rawApto) {
       estadoValidacion = 'error';
       mensajeValidacion = 'Falta número de apartamento';
-    } else if (personas.length === 0 && !isDesocupado) {
+    } else if (unidad.personas.length === 0 && unidad.tipoOcupacion !== 'desocupada') {
       estadoValidacion = 'advertencia';
       mensajeValidacion = 'Sin residentes identificados';
-    } else if (emailsExtraidos.length === 0 && telefonosExtraidos.length === 0) {
+    } else if (unidad.emailsExtraidos.length === 0 && unidad.telefonosExtraidos.length === 0) {
       estadoValidacion = 'advertencia';
       mensajeValidacion = 'Sin datos de contacto';
     }
 
     filasPreview.push({
-      id: `preview-${idx}-${rawApto}`,
-      filaOriginalNum: filaNum,
-      numeroApto: rawApto,
-      torre: torre || undefined,
-      coeficiente,
-      tipoOcupacion,
-      personas,
-      emailsExtraidos,
-      telefonosExtraidos,
+      id: `preview-${key}`,
+      filaOriginalNum: unidad.filaOriginalNum,
+      numeroApto: unidad.rawApto,
+      torre: unidad.torre,
+      coeficiente: unidad.coeficiente,
+      tipoOcupacion: unidad.tipoOcupacion,
+      personas: unidad.personas,
+      emailsExtraidos: unidad.emailsExtraidos,
+      telefonosExtraidos: unidad.telefonosExtraidos,
+      parqueaderos: unidad.parqueaderos,
       estadoValidacion,
       mensajeValidacion,
     });
-  });
+  }
 
   if (inmuebles.length === 0) {
     errores.push('No se pudieron extraer unidades residenciales válidas de la hoja seleccionada.');
@@ -639,15 +771,15 @@ export function transformarHojaExcel(
 
   const parsedData: ParsedCensoExcel = {
     inmuebles,
-    parqueaderos: [],
+    parqueaderos: parqueaderosExtraidos,
     bodegas: [],
     residentes,
     mascotas: [],
     vehiculos: [],
     estadisticas: {
       totalInmuebles: inmuebles.length,
-      totalParqueaderos: 0,
-      parqueaderosPrivados: 0,
+      totalParqueaderos: parqueaderosExtraidos.length,
+      parqueaderosPrivados: parqueaderosExtraidos.length,
       parqueaderosVisitantes: 0,
       totalBodegas: 0,
       totalResidentes: residentes.length,
@@ -683,9 +815,240 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
     (name) => name.trim().toLowerCase() === 'inmuebles' || name.trim().toLowerCase() === 'unidades',
   );
 
-  // Si NO contiene la hoja oficial, recurrir al procesador inteligente heurístico automático
+  // Si NO contiene la hoja oficial, evaluar si es libro consolidado de copropiedad o directorio libre
   if (!nombreHojaInmuebles) {
     const libroAnalizado = await analizarLibroExcel(file);
+
+    // Caso 1: Consolidado de Copropiedad Multi-hoja (ej: TEKA con PROPIETARIOS, AUTORIZADOS, MASCOTAS, VEHICULOS, ARRENDATARIOS)
+    if (libroAnalizado.esConsolidadoCopropiedad && libroAnalizado.hojasConsolidadoDetectadas) {
+      const { propietarios, autorizados, vehiculos: vehSheetName, mascotas: masSheetName, arrendatarios: arrSheetName } =
+        libroAnalizado.hojasConsolidadoDetectadas;
+
+      const baseHoja = propietarios || libroAnalizado.hojaRecomendada;
+      const wsBase = wb.Sheets[baseHoja];
+      const rawBase: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wsBase, { defval: '' });
+      const colsBase = rawBase.length > 0 ? Object.keys(rawBase[0]) : [];
+      const mapeoBase = sugerirMapeoColumnas(colsBase);
+      const resBase = transformarHojaExcel(rawBase, mapeoBase);
+
+      const inmuebles = [...resBase.parsedData.inmuebles];
+      const residentes = [...resBase.parsedData.residentes];
+      const parqueaderos = [...resBase.parsedData.parqueaderos];
+      const vehiculos: ImportarVehiculoItem[] = [];
+      const mascotas: ImportarMascotaItem[] = [];
+      const bodegas: ImportarBodegaItem[] = [];
+
+      const getColVal = (row: Record<string, unknown>, patterns: string[]): unknown => {
+        for (const p of patterns) {
+          const foundKey = Object.keys(row).find(
+            (k) => k.trim().toLowerCase() === p.toLowerCase() || k.trim().toLowerCase().includes(p.toLowerCase()),
+          );
+          if (foundKey && row[foundKey] !== undefined && row[foundKey] !== '') {
+            return row[foundKey];
+          }
+        }
+        return undefined;
+      };
+
+      // Ingerir Autorizados / Residentes Adicionales
+      if (autorizados && wb.Sheets[autorizados]) {
+        const rawAut: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wb.Sheets[autorizados], { defval: '' });
+        rawAut.forEach((r) => {
+          const nom = String(getColVal(r, ['AUTORIZADOS', 'AUTORIZADO', 'RESIDENTE', 'NOMBRE']) || '').trim();
+          const rawApto = String(getColVal(r, ['APTO', 'APARTAMENTO', 'NUMERO']) || '').trim();
+          const rawTorre = normalizarTorre(String(getColVal(r, ['TORRE']) || ''));
+          if (!nom || !rawApto) return;
+
+          const doc = String(getColVal(r, ['IDENTIFICACION', 'CEDULA', 'DOCUMENTO']) || '').trim() || undefined;
+          const tels = cleanPhones(getColVal(r, ['TELEFONO', 'CELULAR']));
+          const edad = parseNumber(getColVal(r, ['EDAD']));
+          let fechaNac: string | undefined = undefined;
+          if (edad !== undefined && edad >= 0 && edad <= 120) {
+            fechaNac = `${new Date().getFullYear() - Math.floor(edad)}-01-01`;
+          }
+
+          const yaExiste = residentes.some(
+            (res) =>
+              (res.apto || '').toLowerCase() === rawApto.toLowerCase() &&
+              normalizarTorre(res.torre).toLowerCase() === rawTorre.toLowerCase() &&
+              res.nombreCompleto.toLowerCase() === nom.toLowerCase(),
+          );
+
+          if (!yaExiste) {
+            residentes.push({
+              torre: rawTorre || undefined,
+              apto: rawApto,
+              nombreCompleto: nom,
+              documento: doc,
+              condicion: 'conviviente',
+              esContactoPrincipal: false,
+              fechaNacimiento: fechaNac,
+              telefono: tels[0] || undefined,
+            });
+          }
+        });
+      }
+
+      // Ingerir Vehículos
+      if (vehSheetName && wb.Sheets[vehSheetName]) {
+        const rawVeh: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wb.Sheets[vehSheetName], { defval: '' });
+        rawVeh.forEach((r) => {
+          const rawApto = String(getColVal(r, ['APTO', 'APARTAMENTO']) || '').trim();
+          const rawTorre = normalizarTorre(String(getColVal(r, ['TORRE']) || ''));
+          const rawTipo = String(getColVal(r, ['VEHICULO', 'TIPO']) || '').trim().toLowerCase();
+          const rawPlaca = String(getColVal(r, ['PLACAS', 'PLACA']) || '').trim().toUpperCase().replace(/[\s\-]/g, '');
+          const marca = String(getColVal(r, ['MARCA']) || '').trim() || undefined;
+          const color = String(getColVal(r, ['COLOR']) || '').trim() || undefined;
+
+          if (!rawApto) return;
+          if (!rawPlaca && !rawTipo && !marca) return;
+
+          const tipoNorm = rawTipo.includes('moto') ? 'moto' : rawTipo.includes('bici') ? 'bicicleta' : 'carro';
+          let placaFinal = rawPlaca;
+          if (placaFinal.length < 5 || placaFinal.length > 8) {
+            if (tipoNorm === 'bicicleta') placaFinal = 'BIC-SN';
+            else placaFinal = '';
+          }
+
+          vehiculos.push({
+            torre: rawTorre || undefined,
+            apto: rawApto,
+            tipo: tipoNorm,
+            placa: placaFinal || undefined,
+            marca,
+            color,
+            parqueaEnEdificio: true,
+          });
+        });
+      }
+
+      // Ingerir Mascotas
+      if (masSheetName && wb.Sheets[masSheetName]) {
+        const rawMas: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wb.Sheets[masSheetName], { defval: '' });
+        rawMas.forEach((r) => {
+          const rawApto = String(getColVal(r, ['APTO', 'APARTAMENTO']) || '').trim();
+          const rawTorre = normalizarTorre(String(getColVal(r, ['TORRE']) || ''));
+          const rawTipo = String(getColVal(r, ['MASCOTAS', 'MASCOTA', 'TIPO']) || '').trim().toLowerCase();
+          const nombre = String(getColVal(r, ['NOMBRE']) || '').trim();
+          const raza = String(getColVal(r, ['RAZA']) || '').trim() || undefined;
+          const carnet = String(getColVal(r, ['CARNET DE VACUNAS', 'VACUNAS']) || '').toLowerCase();
+
+          if (!rawApto || (!nombre && !rawTipo)) return;
+
+          const tipoNorm = rawTipo.includes('gato') || rawTipo.includes('felin')
+            ? 'gato'
+            : rawTipo.includes('perr') || rawTipo.includes('can')
+              ? 'perro'
+              : 'perro';
+
+          mascotas.push({
+            torre: rawTorre || undefined,
+            apto: rawApto,
+            tipo: tipoNorm,
+            nombre: nombre || `Mascota ${tipoNorm}`,
+            raza: raza || 'No especificada',
+            vacunasAlDia: carnet.includes('al dia') || carnet.includes('si') || carnet.includes('al día'),
+          });
+        });
+      }
+
+      // Ingerir Arrendatarios
+      if (arrSheetName && wb.Sheets[arrSheetName]) {
+        const rawArr: Record<string, unknown>[] = XLSX.utils.sheet_to_json(wb.Sheets[arrSheetName], { defval: '' });
+        rawArr.forEach((r) => {
+          const rawApto = String(getColVal(r, ['APTO', 'APARTAMENTO']) || '').trim();
+          const rawTorre = normalizarTorre(String(getColVal(r, ['TORRE']) || ''));
+          const nombreRes = String(getColVal(r, ['RESIDENTE', 'NOMBRE']) || '').trim();
+          const numPq = String(getColVal(r, ['# PQ', 'PQ', 'PARQUEADERO']) || '').trim();
+          const rawPlaca = String(getColVal(r, ['PLACAS', 'PLACA']) || '').trim().toUpperCase().replace(/[\s\-]/g, '');
+
+          if (!rawApto) return;
+
+          if (numPq && !parqueaderos.some((p) => p.numeroParqueadero === numPq)) {
+            parqueaderos.push({
+              numeroParqueadero: numPq,
+              torreAsignada: rawTorre || undefined,
+              aptoAsignado: rawApto,
+              tipo: 'carro',
+              esCubierto: true,
+            });
+          }
+
+          if (rawPlaca && rawPlaca.length >= 5 && rawPlaca.length <= 8) {
+            const yaVeh = vehiculos.some((v) => v.placa === rawPlaca);
+            if (!yaVeh) {
+              vehiculos.push({
+                torre: rawTorre || undefined,
+                apto: rawApto,
+                tipo: 'carro',
+                placa: rawPlaca,
+                marca: String(getColVal(r, ['MARCA']) || '').trim() || undefined,
+                color: String(getColVal(r, ['COLOR']) || '').trim() || undefined,
+                parqueaEnEdificio: true,
+              });
+            }
+          }
+
+          if (nombreRes) {
+            const doc = String(getColVal(r, ['IDENTIFICACION', 'CEDULA']) || '').trim() || undefined;
+            const tels = cleanPhones(getColVal(r, ['TELEFONO', 'CELULAR']));
+            const emails = cleanEmails(getColVal(r, ['EMAIL', 'CORREO']));
+
+            const yaExiste = residentes.some(
+              (res) =>
+                (res.apto || '').toLowerCase() === rawApto.toLowerCase() &&
+                normalizarTorre(res.torre).toLowerCase() === rawTorre.toLowerCase() &&
+                res.nombreCompleto.toLowerCase() === nombreRes.toLowerCase(),
+            );
+
+            if (!yaExiste) {
+              residentes.push({
+                torre: rawTorre || undefined,
+                apto: rawApto,
+                nombreCompleto: nombreRes,
+                documento: doc,
+                condicion: 'arrendatario',
+                esContactoPrincipal: false,
+                telefono: tels[0] || undefined,
+                email: emails[0] || undefined,
+              });
+            }
+
+            const inm = inmuebles.find(
+              (i) => (i.numeroApto || '').toLowerCase() === rawApto.toLowerCase() && normalizarTorre(i.torre).toLowerCase() === rawTorre.toLowerCase(),
+            );
+            if (inm) inm.tipoOcupacion = 'habitada';
+          }
+        });
+      }
+
+      advertencias.push(
+        `Consolidado de copropiedad multi-hoja procesado: ${inmuebles.length} inmuebles únicos, ${residentes.length} personas, ${parqueaderos.length} parqueaderos, ${vehiculos.length} vehículos y ${mascotas.length} mascotas.`,
+      );
+
+      return {
+        inmuebles,
+        parqueaderos,
+        bodegas,
+        residentes,
+        mascotas,
+        vehiculos,
+        estadisticas: {
+          totalInmuebles: inmuebles.length,
+          totalParqueaderos: parqueaderos.length,
+          parqueaderosPrivados: parqueaderos.length,
+          parqueaderosVisitantes: 0,
+          totalBodegas: 0,
+          totalResidentes: residentes.length,
+          totalMascotas: mascotas.length,
+          totalVehiculos: vehiculos.length,
+        },
+        errores: [],
+        advertencias,
+      };
+    }
+
+    // Caso 2: Directorio Libre u Hoja Única
     const hojaObjetivo = libroAnalizado.hojaRecomendada;
     if (!hojaObjetivo) {
       errores.push('El archivo no contiene hojas con información residencial válida.');

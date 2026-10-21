@@ -323,6 +323,19 @@ export default function ModalCargaExcel({
     );
   };
 
+  const alternarContactoPrincipal = (filaId: string, nombrePersona: string) => {
+    setFilasPreview((prev) =>
+      prev.map((f) => {
+        if (f.id !== filaId) return f;
+        const personasActualizadas = f.personas.map((p) => ({
+          ...p,
+          esContactoPrincipal: p.nombreCompleto === nombrePersona,
+        }));
+        return { ...f, personas: personasActualizadas };
+      }),
+    );
+  };
+
   // Confirmar e importar definitivo a la base de datos
   const handleImportarDefinitivo = async () => {
     if (!parsedDataFinal || filasPreview.length === 0) return;
