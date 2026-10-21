@@ -517,6 +517,35 @@ export default function ModalCargaExcel({
           }),
         );
 
+      const vehiculosSaneados = (parsedDataFinal.vehiculos ?? [])
+        .filter((v) => Boolean(v.apto && (v.placa || v.tipo || v.marca || v.color)))
+        .map((v) => {
+          let rawPlaca = String(v.placa || '').trim().toUpperCase().replace(/[\s\-]/g, '');
+          if (!rawPlaca && v.color && /^[A-Z]{3}\-?[0-9]{2}[0-9A-Z]?$/i.test(String(v.color).trim())) {
+            rawPlaca = String(v.color).trim().toUpperCase().replace(/[\s\-]/g, '');
+          } else if (!rawPlaca && v.marca && /^[A-Z]{3}\-?[0-9]{2}[0-9A-Z]?$/i.test(String(v.marca).trim())) {
+            rawPlaca = String(v.marca).trim().toUpperCase().replace(/[\s\-]/g, '');
+          }
+          const tipoNorm = v.tipo === 'moto' ? 'moto' : v.tipo === 'bicicleta' ? 'bicicleta' : 'carro';
+          let placaFinal = rawPlaca;
+          if (placaFinal.length >= 3 && placaFinal.length <= 10) {
+            // Válida
+          } else if (placaFinal.length > 10) {
+            placaFinal = placaFinal.slice(0, 10);
+          } else if (tipoNorm === 'bicicleta') {
+            placaFinal = 'BIC-SN';
+          } else if (tipoNorm === 'moto') {
+            placaFinal = `MOT-SN-${v.apto}`.slice(0, 10);
+          } else {
+            placaFinal = `VEH-SN-${v.apto}`.slice(0, 10);
+          }
+          return {
+            ...v,
+            tipo: tipoNorm,
+            placa: placaFinal,
+          };
+        });
+
       const res = await apiFetch('/censo/importar-masivo', {
         method: 'POST',
         body: JSON.stringify({
@@ -525,7 +554,7 @@ export default function ModalCargaExcel({
           bodegas: parsedDataFinal.bodegas ?? [],
           residentes: residentesActualizados,
           mascotas: parsedDataFinal.mascotas ?? [],
-          vehiculos: parsedDataFinal.vehiculos ?? [],
+          vehiculos: vehiculosSaneados,
         }),
       });
 
@@ -961,16 +990,17 @@ export default function ModalCargaExcel({
                                     esMenor = true;
                                   }
                                 }
+                                const badgeClass = p.esContactoPrincipal
+                                  ? 'badge badge-xs badge-soft badge-primary font-medium'
+                                  : p.condicion === 'propietario'
+                                    ? 'badge badge-xs badge-soft badge-success'
+                                    : p.condicion === 'arrendatario'
+                                      ? 'badge badge-xs badge-soft badge-info'
+                                      : 'badge badge-xs badge-soft text-base-content/80';
                                 return (
                                   <span
                                     key={idx}
-                                    className={`badge badge-xs text-3xs ${
-                                      p.esContactoPrincipal
-                                        ? 'badge-primary font-semibold'
-                                        : p.condicion === 'propietario'
-                                          ? 'badge-secondary'
-                                          : 'badge-ghost text-base-content/70'
-                                    }`}
+                                    className={`${badgeClass} text-3xs`}
                                     title={`${p.nombreCompleto} (${p.condicion}${esMenor ? ' · menor' : ''}${p.esContactoPrincipal ? ' · contacto principal' : ''})`}
                                   >
                                     {p.nombreCompleto}

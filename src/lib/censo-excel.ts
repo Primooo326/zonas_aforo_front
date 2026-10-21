@@ -986,25 +986,42 @@ export async function parsearExcelCenso(file: File): Promise<ParsedCensoExcel> {
           const rawApto = String(getColVal(r, ['APTO', 'APARTAMENTO']) || '').trim();
           const rawTorre = normalizarTorre(String(getColVal(r, ['TORRE']) || ''));
           const rawTipo = String(getColVal(r, ['VEHICULO', 'TIPO']) || '').trim().toLowerCase();
-          const rawPlaca = String(getColVal(r, ['PLACAS', 'PLACA']) || '').trim().toUpperCase().replace(/[\s\-]/g, '');
+          let rawPlaca = String(getColVal(r, ['PLACAS', 'PLACA']) || '').trim().toUpperCase().replace(/[\s\-]/g, '');
           const marca = String(getColVal(r, ['MARCA']) || '').trim() || undefined;
           const color = String(getColVal(r, ['COLOR']) || '').trim() || undefined;
 
           if (!rawApto) return;
-          if (!rawPlaca && !rawTipo && !marca) return;
+          // Si no tiene placa ni tipo ni marca ni color (fila vacía o sólo número de apto)
+          if (!rawPlaca && !rawTipo && !marca && !color) return;
+
+          // Detección inteligente si la placa quedó en columna color o marca
+          if (!rawPlaca && color && /^[A-Z]{3}\-?[0-9]{2}[0-9A-Z]?$/i.test(color.trim())) {
+            rawPlaca = color.trim().toUpperCase().replace(/[\s\-]/g, '');
+          } else if (!rawPlaca && marca && /^[A-Z]{3}\-?[0-9]{2}[0-9A-Z]?$/i.test(marca.trim())) {
+            rawPlaca = marca.trim().toUpperCase().replace(/[\s\-]/g, '');
+          }
 
           const tipoNorm = rawTipo.includes('moto') ? 'moto' : rawTipo.includes('bici') ? 'bicicleta' : 'carro';
           let placaFinal = rawPlaca;
-          if (placaFinal.length < 5 || placaFinal.length > 8) {
-            if (tipoNorm === 'bicicleta') placaFinal = 'BIC-SN';
-            else placaFinal = '';
+          if (placaFinal.length >= 3 && placaFinal.length <= 10) {
+            // Placa directa válida
+          } else if (placaFinal.length > 10) {
+            placaFinal = placaFinal.slice(0, 10);
+          } else if (tipoNorm === 'bicicleta') {
+            placaFinal = 'BIC-SN';
+          } else if (tipoNorm === 'moto') {
+            placaFinal = `MOT-SN-${rawApto}`.slice(0, 10);
+          } else if (marca || color) {
+            placaFinal = `VEH-SN-${rawApto}`.slice(0, 10);
+          } else {
+            return;
           }
 
           vehiculos.push({
             torre: rawTorre || undefined,
             apto: rawApto,
             tipo: tipoNorm,
-            placa: placaFinal || undefined,
+            placa: placaFinal,
             marca,
             color,
             parqueaEnEdificio: true,
