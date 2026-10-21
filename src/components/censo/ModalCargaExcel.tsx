@@ -33,9 +33,13 @@ const DESTINOS_OPCIONES: { valor: CampoCensoDestino; etiqueta: string; descripci
   { valor: 'nombrePropietario', etiqueta: '👤 Nombre del Propietario', descripcion: 'Titular o propietario del inmueble' },
   { valor: 'residentes', etiqueta: '👥 Residentes / Convivientes', descripcion: 'Nombres de las personas que habitan la unidad' },
   { valor: 'documento', etiqueta: '🪪 Documento / Cédula', descripcion: 'Documento de identidad del titular' },
+  { valor: 'edad', etiqueta: '⏳ Edad (Años)', descripcion: 'Edad en años del residente' },
   { valor: 'fechaNacimiento', etiqueta: '🎂 Fecha de Nacimiento', descripcion: 'Fecha de nacimiento del residente' },
   { valor: 'email', etiqueta: '✉️ Correo(s) Electrónico(s)', descripcion: 'Emails de contacto' },
   { valor: 'telefono', etiqueta: '📞 Teléfono(s) / Celular(es)', descripcion: 'Teléfonos de contacto' },
+  { valor: 'parqueadero', etiqueta: '🚗 Parqueadero Asignado', descripcion: 'Número o identificador del parqueadero asignado a la unidad' },
+  { valor: 'placaVehiculo', etiqueta: '🚘 Placa / Vehículo', descripcion: 'Placa del vehículo asignado a la unidad' },
+  { valor: 'mascota', etiqueta: '🐾 Mascota(s)', descripcion: 'Nombre o descripción de la mascota' },
   { valor: 'tipoOcupacion', etiqueta: '🚪 Estado de Ocupación', descripcion: 'Habitada o desocupada' },
   { valor: 'metrosCuadrados', etiqueta: '📐 Metros Cuadrados (Área)', descripcion: 'Área privada' },
   { valor: 'cuartos', etiqueta: '🛏️ Habitaciones / Cuartos', descripcion: 'Número de alcobas' },
@@ -78,6 +82,8 @@ export default function ModalCargaExcel({
     parqueaderosProcesados: number;
     bodegasProcesadas: number;
     residentesProcesados?: number;
+    vehiculosProcesados?: number;
+    mascotasProcesadas?: number;
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -204,17 +210,87 @@ export default function ModalCargaExcel({
     const extraMascotas = multiSheetData?.mascotas ?? [];
     const extraVehiculos = multiSheetData?.vehiculos ?? [];
 
+    // Consolidar parqueaderos de hoja principal y hojas complementarias
+    const parqMap = new Map<string, (typeof transformacion.parsedData.parqueaderos)[number]>();
+    transformacion.parsedData.parqueaderos.forEach((p) => {
+      const k = `${normalizarTorre(p.torreAsignada).toLowerCase()}__${p.numeroParqueadero.trim().toUpperCase()}`;
+      parqMap.set(k, p);
+    });
+    extraParqueaderos.forEach((p) => {
+      const k = `${normalizarTorre(p.torreAsignada).toLowerCase()}__${p.numeroParqueadero.trim().toUpperCase()}`;
+      if (!parqMap.has(k)) {
+        parqMap.set(k, p);
+      } else {
+        const exist = parqMap.get(k)!;
+        if (!exist.aptoAsignado && p.aptoAsignado) exist.aptoAsignado = p.aptoAsignado;
+        if (!exist.torreAsignada && p.torreAsignada) exist.torreAsignada = p.torreAsignada;
+      }
+    });
+    const parqueaderosCombinados = Array.from(parqMap.values());
+
+    // Consolidar vehículos
+    const vehMap = new Map<string, (typeof extraVehiculos)[number]>();
+    transformacion.parsedData.vehiculos.forEach((v) => {
+      const k = `${normalizarTorre(v.torre).toLowerCase()}_${(v.apto || '').trim().toLowerCase()}_${(v.placa || '').toUpperCase()}`;
+      vehMap.set(k, v);
+    });
+    extraVehiculos.forEach((v) => {
+      const k = `${normalizarTorre(v.torre).toLowerCase()}_${(v.apto || '').trim().toLowerCase()}_${(v.placa || '').toUpperCase()}`;
+      if (!vehMap.has(k)) {
+        vehMap.set(k, v);
+      }
+    });
+    const vehiculosCombinados = Array.from(vehMap.values());
+
+    // Consolidar mascotas
+    const masMap = new Map<string, (typeof extraMascotas)[number]>();
+    transformacion.parsedData.mascotas.forEach((m) => {
+      const k = `${normalizarTorre(m.torre).toLowerCase()}_${(m.apto || '').trim().toLowerCase()}_${m.nombre.trim().toLowerCase()}`;
+      masMap.set(k, m);
+    });
+    extraMascotas.forEach((m) => {
+      const k = `${normalizarTorre(m.torre).toLowerCase()}_${(m.apto || '').trim().toLowerCase()}_${m.nombre.trim().toLowerCase()}`;
+      if (!masMap.has(k)) {
+        masMap.set(k, m);
+      }
+    });
+    const mascotasCombinadas = Array.from(masMap.values());
+
     const filasEnriquecidas = transformacion.filasPreview.map((fila) => {
       const claveUnidad = `${normalizarTorre(fila.torre).toLowerCase()}_${fila.numeroApto.trim().toLowerCase()}`;
       const idLegible = fila.torre ? `${normalizarTorre(fila.torre)} - Apto ${fila.numeroApto.trim()}`.toLowerCase() : `apto ${fila.numeroApto.trim()}`.toLowerCase();
+
+      // Parqueaderos asignados a esta unidad
+      const parqsSet = new Set<string>(fila.parqueaderos || []);
+      parqueaderosCombinados.forEach((p) => {
+        const pKey = `${normalizarTorre(p.torreAsignada).toLowerCase()}_${(p.aptoAsignado || '').trim().toLowerCase()}`;
+        if (pKey === claveUnidad) {
+          parqsSet.add(p.numeroParqueadero);
+        }
+      });
+      const parqsFinales = Array.from(parqsSet);
+
+      // Vehículos asignados a esta unidad
+      const vehsDeUnidad = vehiculosCombinados.filter((v) => {
+        const vKey = `${normalizarTorre(v.torre).toLowerCase()}_${(v.apto || '').trim().toLowerCase()}`;
+        const vId = (v.identificador || '').trim().toLowerCase();
+        return vKey === claveUnidad || (vId && vId === idLegible);
+      });
+      const vehsResumen = vehsDeUnidad.map((v) => (v.placa ? `${v.placa} (${v.tipo})` : v.tipo));
+
+      // Mascotas asignadas a esta unidad
+      const mascDeUnidad = mascotasCombinadas.filter((m) => {
+        const mKey = `${normalizarTorre(m.torre).toLowerCase()}_${(m.apto || '').trim().toLowerCase()}`;
+        const mId = (m.identificador || '').trim().toLowerCase();
+        return mKey === claveUnidad || (mId && mId === idLegible);
+      });
+      const mascResumen = mascDeUnidad.map((m) => `${m.nombre} (${m.tipo})`);
 
       const residentesDeHoja = extraResidentes.filter((r) => {
         const rKey = `${normalizarTorre(r.torre).toLowerCase()}_${(r.apto || '').trim().toLowerCase()}`;
         const rId = (r.identificador || '').trim().toLowerCase();
         return rKey === claveUnidad || (rId && rId === idLegible);
       });
-
-      if (residentesDeHoja.length === 0) return fila;
 
       const personasCombinadas = [...fila.personas];
       const emailsSet = new Set(fila.emailsExtraidos);
@@ -252,6 +328,11 @@ export default function ModalCargaExcel({
         personas: personasCombinadas,
         emailsExtraidos: emailsFinales,
         telefonosExtraidos: telsFinales,
+        parqueaderos: parqsFinales,
+        vehiculosCount: vehsDeUnidad.length,
+        mascotasCount: mascDeUnidad.length,
+        vehiculosResumen: vehsResumen,
+        mascotasResumen: mascResumen,
         estadoValidacion: fila.numeroApto ? ('valido' as const) : fila.estadoValidacion,
         mensajeValidacion: fila.numeroApto ? '' : fila.mensajeValidacion,
       };
@@ -273,20 +354,20 @@ export default function ModalCargaExcel({
 
     const parsedEnriquecido: ParsedCensoExcel = {
       ...transformacion.parsedData,
-      parqueaderos: extraParqueaderos,
+      parqueaderos: parqueaderosCombinados,
       bodegas: extraBodegas,
       residentes: residentesCombinados,
-      mascotas: extraMascotas,
-      vehiculos: extraVehiculos,
+      mascotas: mascotasCombinadas,
+      vehiculos: vehiculosCombinados,
       estadisticas: {
         ...transformacion.parsedData.estadisticas,
-        totalParqueaderos: extraParqueaderos.length,
-        parqueaderosPrivados: extraParqueaderos.filter((p) => !p.esVisitante).length,
-        parqueaderosVisitantes: extraParqueaderos.filter((p) => p.esVisitante).length,
+        totalParqueaderos: parqueaderosCombinados.length,
+        parqueaderosPrivados: parqueaderosCombinados.filter((p) => !p.esVisitante).length,
+        parqueaderosVisitantes: parqueaderosCombinados.filter((p) => p.esVisitante).length,
         totalBodegas: extraBodegas.length,
         totalResidentes: residentesCombinados.length,
-        totalMascotas: extraMascotas.length,
-        totalVehiculos: extraVehiculos.length,
+        totalMascotas: mascotasCombinadas.length,
+        totalVehiculos: vehiculosCombinados.length,
       },
     };
 
@@ -396,9 +477,11 @@ export default function ModalCargaExcel({
       setResultado({
         inmueblesCreados: res.inmueblesCreados ?? 0,
         inmueblesActualizados: res.inmueblesActualizados ?? 0,
-        parqueaderosProcesados: res.parqueaderosProcesados ?? 0,
-        bodegasProcesadas: res.bodegasProcesadas ?? 0,
+        parqueaderosProcesados: res.parqueaderosProcesados ?? (parsedDataFinal.parqueaderos?.length ?? 0),
+        bodegasProcesadas: res.bodegasProcesadas ?? (parsedDataFinal.bodegas?.length ?? 0),
         residentesProcesados: res.residentesProcesados ?? residentesActualizados.length,
+        vehiculosProcesados: res.vehiculosProcesados ?? (parsedDataFinal.vehiculos?.length ?? 0),
+        mascotasProcesadas: res.mascotasProcesadas ?? (parsedDataFinal.mascotas?.length ?? 0),
       });
 
       setPaso(4);
@@ -672,6 +755,52 @@ export default function ModalCargaExcel({
                 </button>
               </div>
 
+              {/* Banner explicativo de hojas complementarias detectadas */}
+              {(libro?.esConsolidadoCopropiedad || (multiSheetData && (multiSheetData.vehiculos.length > 0 || multiSheetData.mascotas.length > 0 || multiSheetData.residentes.length > 0))) && (
+                <div className="alert alert-info text-xs bg-info/10 border-info/20 shadow-xs flex items-start gap-3 p-3 rounded-xl">
+                  <span className="icon-[tabler--layers-intersect] text-xl text-info shrink-0 mt-0.5" />
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-bold text-base-content text-xs">
+                        Hojas Complementarias Detectadas y Vinculadas Automáticamente
+                      </span>
+                      <span className="badge badge-info badge-xs font-semibold">
+                        {libro?.esConsolidadoCopropiedad ? 'Consolidado Multi-Pestaña' : 'Multi-Hoja'}
+                      </span>
+                    </div>
+                    <p className="text-2xs text-base-content/80 leading-relaxed">
+                      En este paso asocias las columnas de la hoja base <strong>&quot;{hojaSeleccionada}&quot;</strong> (inmuebles, propietarios y parqueaderos). Las pestañas especializadas de vehículos, mascotas y autorizados se vinculan automáticamente por Torre y Apartamento sin requerir mapeo manual:
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-0.5">
+                      {multiSheetData && multiSheetData.vehiculos.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
+                          <span className="text-primary font-bold">🚘 {multiSheetData.vehiculos.length}</span>
+                          <span>Vehículos ({libro?.hojasConsolidadoDetectadas?.vehiculos || 'VEHICULOS'})</span>
+                        </div>
+                      )}
+                      {multiSheetData && multiSheetData.mascotas.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
+                          <span className="text-secondary font-bold">🐾 {multiSheetData.mascotas.length}</span>
+                          <span>Mascotas ({libro?.hojasConsolidadoDetectadas?.mascotas || 'MASCOTAS'})</span>
+                        </div>
+                      )}
+                      {multiSheetData && multiSheetData.residentes.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
+                          <span className="text-accent font-bold">👥 {multiSheetData.residentes.length}</span>
+                          <span>Residentes Adicionales</span>
+                        </div>
+                      )}
+                      {multiSheetData && multiSheetData.parqueaderos.length > 0 && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-base-100 border border-base-200 text-2xs font-semibold text-base-content shadow-2xs">
+                          <span className="text-success font-bold">🚗 {multiSheetData.parqueaderos.length}</span>
+                          <span>Parqueaderos en consolidado</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
                 {columnasHoja
                   .filter((col) => col.trim() && !col.startsWith('__EMPTY'))
@@ -738,26 +867,32 @@ export default function ModalCargaExcel({
           {paso === 3 && (
             <div className="space-y-4">
               {/* Tarjetas de Resumen */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-center">
                 <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
                   <div className="text-xl font-bold text-primary">{filasPreview.length}</div>
-                  <div className="text-2xs text-base-content/70">Unidades a Importar</div>
+                  <div className="text-2xs text-base-content/70">🏢 Unidades</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20">
                   <div className="text-xl font-bold text-accent">{totalResidentesEnPreview}</div>
-                  <div className="text-2xs text-base-content/70">Residentes Detectados</div>
+                  <div className="text-2xs text-base-content/70">👥 Personas</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-success/10 border border-success/20">
-                  <div className="text-xl font-bold text-success">
+                  <div className="text-xl font-bold text-success">{parsedDataFinal?.parqueaderos?.length ?? 0}</div>
+                  <div className="text-2xs text-base-content/70">🚗 Parqueaderos</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-info/10 border border-info/20">
+                  <div className="text-xl font-bold text-info">{parsedDataFinal?.vehiculos?.length ?? 0}</div>
+                  <div className="text-2xs text-base-content/70">🚘 Vehículos</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-secondary/10 border border-secondary/20">
+                  <div className="text-xl font-bold text-secondary">{parsedDataFinal?.mascotas?.length ?? 0}</div>
+                  <div className="text-2xs text-base-content/70">🐾 Mascotas</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-base-200 border border-base-300">
+                  <div className="text-xl font-bold text-base-content">
                     {filasPreview.filter((f) => f.tipoOcupacion === 'habitada').length}
                   </div>
-                  <div className="text-2xs text-base-content/70">Habitadas</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-warning/10 border border-warning/20">
-                  <div className="text-xl font-bold text-warning">
-                    {filasPreview.filter((f) => f.tipoOcupacion === 'desocupada').length}
-                  </div>
-                  <div className="text-2xs text-base-content/70">Desocupadas</div>
+                  <div className="text-2xs text-base-content/70">🚪 Habitadas</div>
                 </div>
               </div>
 
@@ -805,6 +940,7 @@ export default function ModalCargaExcel({
                       <th>Ocupación</th>
                       <th>Residentes y Propietarios Desdoblados</th>
                       <th>Contacto Limpio</th>
+                      <th>🚗 PQ / 🚘 Dotación</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -908,6 +1044,38 @@ export default function ModalCargaExcel({
                             <div className="text-base-content/60 truncate">{fila.telefonosExtraidos.join(' • ')}</div>
                           )}
                         </td>
+
+                        {/* Dotación: Parqueadero, Vehículos y Mascotas */}
+                        <td className="text-2xs max-w-xs">
+                          <div className="flex flex-wrap items-center gap-1">
+                            {fila.parqueaderos && fila.parqueaderos.length > 0 ? (
+                              <span className="badge badge-success badge-outline badge-xs text-3xs font-semibold gap-0.5">
+                                🚗 PQ: {fila.parqueaderos.join(', ')}
+                              </span>
+                            ) : null}
+                            {Boolean(fila.vehiculosCount && fila.vehiculosCount > 0) && (
+                              <span
+                                className="badge badge-info badge-outline badge-xs text-3xs font-semibold gap-0.5 cursor-help"
+                                title={fila.vehiculosResumen?.join(' • ')}
+                              >
+                                🚘 {fila.vehiculosCount} veh
+                              </span>
+                            )}
+                            {Boolean(fila.mascotasCount && fila.mascotasCount > 0) && (
+                              <span
+                                className="badge badge-secondary badge-outline badge-xs text-3xs font-semibold gap-0.5 cursor-help"
+                                title={fila.mascotasResumen?.join(' • ')}
+                              >
+                                🐾 {fila.mascotasCount} masc
+                              </span>
+                            )}
+                            {(!fila.parqueaderos || fila.parqueaderos.length === 0) &&
+                              (!fila.vehiculosCount || fila.vehiculosCount === 0) &&
+                              (!fila.mascotasCount || fila.mascotasCount === 0) && (
+                                <span className="text-base-content/40 text-3xs italic">—</span>
+                              )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -932,7 +1100,7 @@ export default function ModalCargaExcel({
                 sanitizados y guardados limpiamente.
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-center pt-2 max-w-md mx-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-center pt-2 max-w-lg mx-auto">
                 <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
                   <div className="text-2xl font-bold text-primary">{resultado.inmueblesCreados}</div>
                   <div className="text-2xs text-base-content/70">Nuevos Inmuebles</div>
@@ -945,6 +1113,24 @@ export default function ModalCargaExcel({
                   <div className="text-2xl font-bold text-accent">{resultado.residentesProcesados}</div>
                   <div className="text-2xs text-base-content/70">Residentes Censados</div>
                 </div>
+                {resultado.parqueaderosProcesados > 0 && (
+                  <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                    <div className="text-2xl font-bold text-success">{resultado.parqueaderosProcesados}</div>
+                    <div className="text-2xs text-base-content/70">Parqueaderos Asignados</div>
+                  </div>
+                )}
+                {Boolean(resultado.vehiculosProcesados && resultado.vehiculosProcesados > 0) && (
+                  <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                    <div className="text-2xl font-bold text-info">{resultado.vehiculosProcesados}</div>
+                    <div className="text-2xs text-base-content/70">Vehículos Registrados</div>
+                  </div>
+                )}
+                {Boolean(resultado.mascotasProcesadas && resultado.mascotasProcesadas > 0) && (
+                  <div className="p-3 rounded-lg bg-base-200/50 border border-base-200">
+                    <div className="text-2xl font-bold text-warning">{resultado.mascotasProcesadas}</div>
+                    <div className="text-2xs text-base-content/70">Mascotas Registradas</div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 flex justify-center gap-3">

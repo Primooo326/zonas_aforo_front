@@ -101,6 +101,8 @@ export type CampoCensoDestino =
   | 'email'
   | 'telefono'
   | 'parqueadero'
+  | 'placaVehiculo'
+  | 'mascota'
   | 'tipoOcupacion'
   | 'cuartos'
   | 'banos'
@@ -153,6 +155,10 @@ export interface FilaSanitizadaPreview {
   emailsExtraidos: string[];
   telefonosExtraidos: string[];
   parqueaderos?: string[];
+  vehiculosCount?: number;
+  mascotasCount?: number;
+  vehiculosResumen?: string[];
+  mascotasResumen?: string[];
   estadoValidacion: 'valido' | 'advertencia' | 'error';
   mensajeValidacion?: string;
 }
@@ -468,6 +474,20 @@ export function sugerirMapeoColumnas(columnas: string[]): Record<string, CampoCe
       return;
     }
 
+    // 16. Placa / Vehículo
+    if (!assignedTargets.has('placaVehiculo') && matches(colTrimmed, ['placa', 'placas', 'vehiculo', 'vehiculos', 'carro', 'moto'])) {
+      mapeo[colTrimmed] = 'placaVehiculo';
+      assignedTargets.add('placaVehiculo');
+      return;
+    }
+
+    // 17. Mascota
+    if (!assignedTargets.has('mascota') && matches(colTrimmed, ['mascota', 'mascotas', 'perro', 'gato', 'animal'])) {
+      mapeo[colTrimmed] = 'mascota';
+      assignedTargets.add('mascota');
+      return;
+    }
+
     mapeo[colTrimmed] = 'ignorar';
   });
 
@@ -485,6 +505,8 @@ export function transformarHojaExcel(
   const advertencias: string[] = [];
   const errores: string[] = [];
   const parqueaderosExtraidos: ImportarParqueaderoItem[] = [];
+  const vehiculosExtraidos: ImportarVehiculoItem[] = [];
+  const mascotasExtraidas: ImportarMascotaItem[] = [];
 
   // Mapa de unidades consolidadas por clave única (torre + apto)
   const unidadesMap = new Map<
@@ -502,6 +524,8 @@ export function transformarHojaExcel(
       emailsExtraidos: string[];
       telefonosExtraidos: string[];
       parqueaderos: string[];
+      vehiculos: string[];
+      mascotas: string[];
     }
   >();
 
@@ -616,6 +640,8 @@ export function transformarHojaExcel(
         emailsExtraidos: [],
         telefonosExtraidos: [],
         parqueaderos: [],
+        vehiculos: [],
+        mascotas: [],
       });
     }
 
@@ -632,6 +658,39 @@ export function transformarHojaExcel(
         tipo: 'carro',
         esCubierto: true,
       });
+    }
+
+    // Placa / Vehículo mapeado en la fila
+    const rawPlaca = String(getMappedVal('placaVehiculo') || '').trim();
+    if (rawPlaca && !['no', 'ninguno', 'ninguna', '0', 'sn', 's/n', 'n/a', '-'].includes(rawPlaca.toLowerCase())) {
+      const placaLimpia = rawPlaca.toUpperCase().replace(/[\s\-]/g, '');
+      const tipoVeh = rawPlaca.toLowerCase().includes('moto') ? 'moto' : 'carro';
+      if (!unidad.vehiculos.includes(placaLimpia)) {
+        unidad.vehiculos.push(placaLimpia);
+        vehiculosExtraidos.push({
+          torre: torre || undefined,
+          apto: rawApto,
+          tipo: tipoVeh,
+          placa: placaLimpia,
+          parqueaEnEdificio: true,
+        });
+      }
+    }
+
+    // Mascota mapeada en la fila
+    const rawMasc = String(getMappedVal('mascota') || '').trim();
+    if (rawMasc && !['no', 'ninguno', 'ninguna', '0', 'sin mascota', 'n/a', '-'].includes(rawMasc.toLowerCase())) {
+      const tipoMasc = rawMasc.toLowerCase().includes('gato') || rawMasc.toLowerCase().includes('felin') ? 'gato' : 'perro';
+      if (!unidad.mascotas.includes(rawMasc)) {
+        unidad.mascotas.push(rawMasc);
+        mascotasExtraidas.push({
+          torre: torre || undefined,
+          apto: rawApto,
+          tipo: tipoMasc,
+          nombre: rawMasc,
+          raza: 'No especificada',
+        });
+      }
     }
 
     // Acumular correos y teléfonos
@@ -760,6 +819,10 @@ export function transformarHojaExcel(
       emailsExtraidos: unidad.emailsExtraidos,
       telefonosExtraidos: unidad.telefonosExtraidos,
       parqueaderos: unidad.parqueaderos,
+      vehiculosCount: unidad.vehiculos.length,
+      mascotasCount: unidad.mascotas.length,
+      vehiculosResumen: unidad.vehiculos,
+      mascotasResumen: unidad.mascotas,
       estadoValidacion,
       mensajeValidacion,
     });
@@ -774,8 +837,8 @@ export function transformarHojaExcel(
     parqueaderos: parqueaderosExtraidos,
     bodegas: [],
     residentes,
-    mascotas: [],
-    vehiculos: [],
+    mascotas: mascotasExtraidas,
+    vehiculos: vehiculosExtraidos,
     estadisticas: {
       totalInmuebles: inmuebles.length,
       totalParqueaderos: parqueaderosExtraidos.length,
@@ -783,8 +846,8 @@ export function transformarHojaExcel(
       parqueaderosVisitantes: 0,
       totalBodegas: 0,
       totalResidentes: residentes.length,
-      totalMascotas: 0,
-      totalVehiculos: 0,
+      totalMascotas: mascotasExtraidas.length,
+      totalVehiculos: vehiculosExtraidos.length,
     },
     errores,
     advertencias,
