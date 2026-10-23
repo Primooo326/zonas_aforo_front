@@ -231,28 +231,17 @@ export default function PublicPassPage() {
 
                 {pase.observaciones && (
                   <div className="pt-2 border-t arch-border">
-                    <span className="text-3xs uppercase font-bold text-base-content/60 block mb-0.5">
-                      Instrucciones de llegada
-                    </span>
                     <p className="text-2xs italic text-base-content/75 bg-base-200/50 p-2 rounded border arch-border">
                       &quot;{pase.observaciones}&quot;
                     </p>
                   </div>
                 )}
               </div>
-
-              {/* Mensaje al visitante */}
-              <div className="bg-primary/5 p-3 rounded-md border border-primary/20 text-center">
-                <p className="text-2xs text-base-content/75 font-medium leading-relaxed">
-                  Muestra esta pantalla al llegar a la portería o dicta tu código de pase{' '}
-                  <strong className="text-primary font-mono">{pase.codigoAcceso}</strong> al vigilante de turno para tu ingreso.
-                </p>
-              </div>
             </div>
 
             {/* Footer */}
-            <div className="p-3 bg-base-200/50 border-t arch-border text-center text-3xs text-base-content/50 font-mono">
-              Zonas de Aforo &bull; Consola de Portería Digital
+            <div className="p-2.5 bg-base-200/50 border-t arch-border text-center text-3xs text-base-content/50 font-mono">
+              Pase Digital de Acceso &bull; Zonas de Aforo
             </div>
           </div>
         )}

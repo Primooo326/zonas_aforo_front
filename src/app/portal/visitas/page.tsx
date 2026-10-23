@@ -181,23 +181,23 @@ export default function ResidentVisitasPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      {/* Encabezado */}
-      <div className="arch-panel p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-        <div>
+      {/* Encabezado Conciso con Métricas */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b arch-border">
+        <div className="flex items-center gap-3">
           <h1 className="text-xl sm:text-2xl font-black text-base-content flex items-center gap-2">
             <span className="icon-[tabler--id-badge-2] text-primary text-2xl sm:text-3xl" aria-hidden="true"></span>
-            Mis Visitas & Pases de Acceso
+            Visitas & Pases
           </h1>
-          <p className="text-xs sm:text-sm text-base-content/65 mt-1">
-            Genera autorizaciones previas con código QR para agilizar la entrada de tus invitados en portería.
-          </p>
+          <span className="badge badge-sm badge-neutral font-mono font-bold">
+            {pasesActivos.length} activos
+          </span>
         </div>
 
         <button
           onClick={() => setModalCrearAbierto(true)}
-          className="btn btn-primary font-bold shadow-xs gap-2 self-start sm:self-auto cursor-pointer"
+          className="btn btn-sm btn-primary font-bold shadow-xs gap-1.5 self-start sm:self-auto cursor-pointer"
         >
-          <span className="icon-[tabler--user-plus] text-lg" aria-hidden="true"></span>
+          <span className="icon-[tabler--user-plus] text-base" aria-hidden="true"></span>
           + Autorizar Visitante
         </button>
       </div>
@@ -248,98 +248,81 @@ export default function ResidentVisitasPage() {
               <p className="text-xs text-base-content/60 mt-2 font-medium">Cargando pases de acceso...</p>
             </div>
           ) : pasesActivos.length === 0 ? (
-            <div className="arch-panel p-10 text-center shadow-xs">
-              <span className="icon-[tabler--qrcode] text-4xl text-base-content/30 mb-2 block mx-auto" aria-hidden="true"></span>
-              <h3 className="font-bold text-base text-base-content">No tienes pases de acceso activos</h3>
-              <p className="text-xs text-base-content/60 mt-1 max-w-md mx-auto">
-                Crea una invitación para tus amigos, familiares o contratistas. Podrás compartir el enlace con código QR por WhatsApp para ingreso ágil en portería.
+            <div className="arch-panel p-8 text-center shadow-xs">
+              <span className="icon-[tabler--qrcode] text-3xl text-base-content/30 mb-2 block mx-auto" aria-hidden="true"></span>
+              <h3 className="font-bold text-sm text-base-content">No tienes pases de acceso activos</h3>
+              <p className="text-2xs text-base-content/60 mt-0.5 max-w-sm mx-auto">
+                Crea una invitación con código QR para compartirla por WhatsApp y agilizar el ingreso en portería.
               </p>
               <button
                 onClick={() => setModalCrearAbierto(true)}
-                className="btn btn-primary btn-sm font-bold mt-4 shadow-xs"
+                className="btn btn-primary btn-xs font-bold mt-3 shadow-xs"
               >
-                + Generar Primer Pase QR
+                + Generar Pase QR
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {pasesActivos.map((pase) => (
                 <div
                   key={pase._id}
-                  className="arch-panel p-4 flex flex-col justify-between hover:border-primary/50 transition-colors shadow-xs border-t-4 border-t-primary"
+                  className="arch-panel p-3.5 flex flex-col justify-between hover:border-primary/50 transition-colors shadow-xs"
                 >
                   <div>
-                    {/* Header Tarjeta */}
+                    {/* Header: Código + Estado */}
                     <div className="flex items-center justify-between mb-2">
-                      <span className="badge badge-xs badge-neutral font-mono uppercase font-bold tracking-wider">
-                        {pase.modalidad === 'temporal' ? 'Pase Temporal' : 'Un solo uso'}
-                      </span>
-                      <span className="badge badge-xs badge-success font-bold">
-                        Válido
-                      </span>
-                    </div>
-
-                    {/* Código y Nombre */}
-                    <div className="mb-2">
                       <span className="font-mono text-xs font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                         {pase.codigoAcceso}
                       </span>
-                      <h3 className="font-black text-base text-base-content mt-1.5 leading-snug">
-                        {pase.nombreVisitante}
-                      </h3>
+                      <div className="flex items-center gap-1.5">
+                        <span className="badge badge-3xs badge-neutral font-mono uppercase font-bold">
+                          {pase.modalidad === 'temporal' ? 'Temporal' : '1 uso'}
+                        </span>
+                        <span className="badge badge-3xs badge-success font-bold">
+                          Activo
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Detalles */}
-                    <div className="space-y-1.5 text-2xs text-base-content/75 bg-base-200/50 p-2.5 rounded-md border arch-border mt-2">
-                      <p className="flex items-center justify-between">
-                        <span className="text-base-content/60">Motivo:</span>
-                        <span className="font-semibold capitalize">{pase.motivo.replace('_', ' ')}</span>
-                      </p>
-                      <p className="flex items-center justify-between">
-                        <span className="text-base-content/60">Fecha programada:</span>
-                        <span className="font-mono font-medium">
-                          {new Date(pase.fechaInicio).toLocaleDateString('es-CO', {
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </p>
-                      {pase.fechaFin && (
-                        <p className="flex items-center justify-between">
-                          <span className="text-base-content/60">Vence:</span>
-                          <span className="font-mono font-medium">
-                            {new Date(pase.fechaFin).toLocaleDateString('es-CO', {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </span>
-                        </p>
-                      )}
-                      {pase.documentoVisitante && (
-                        <p className="flex items-center justify-between">
-                          <span className="text-base-content/60">Cédula:</span>
-                          <span className="font-mono font-medium">{pase.documentoVisitante}</span>
-                        </p>
-                      )}
+                    {/* Nombre Principal */}
+                    <h3 className="font-bold text-sm text-base-content leading-snug">
+                      {pase.nombreVisitante}
+                    </h3>
+
+                    {/* Chips de Datos Clave (Glanceable) */}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className="badge badge-xs badge-ghost font-medium">
+                        🎟️ {pase.motivo.replace('_', ' ')}
+                      </span>
+                      <span className="badge badge-xs badge-ghost font-mono">
+                        📅 {new Date(pase.fechaInicio).toLocaleDateString('es-CO', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
                       {pase.placaVehiculo && (
-                        <p className="flex items-center justify-between">
-                          <span className="text-base-content/60">Vehículo:</span>
-                          <span className="font-mono font-bold text-primary">🚗 {pase.placaVehiculo}</span>
-                        </p>
-                      )}
-                      {pase.observaciones && (
-                        <p className="text-3xs italic text-base-content/65 pt-1 border-t arch-border">
-                          &quot;{pase.observaciones}&quot;
-                        </p>
+                        <span className="badge badge-xs bg-primary/15 text-primary border-primary/20 font-mono font-bold">
+                          🚗 {pase.placaVehiculo}
+                        </span>
                       )}
                     </div>
+
+                    {/* Detalles Secundarios (Progressive Disclosure sutil) */}
+                    {(pase.documentoVisitante || pase.observaciones) && (
+                      <div className="mt-2 text-3xs text-base-content/65 space-y-0.5 border-t arch-border pt-1.5">
+                        {pase.documentoVisitante && (
+                          <p><span className="text-base-content/50">Doc:</span> {pase.documentoVisitante}</p>
+                        )}
+                        {pase.observaciones && (
+                          <p className="italic truncate">&ldquo;{pase.observaciones}&rdquo;</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Acciones */}
-                  <div className="mt-4 pt-3 border-t arch-border space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
+                  {/* Acciones directas */}
+                  <div className="mt-3 pt-2.5 border-t arch-border flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => compartirPorWhatsApp(pase)}
@@ -356,16 +339,17 @@ export default function ResidentVisitasPage() {
                         className="btn btn-xs btn-primary gap-1 font-bold text-2xs cursor-pointer shadow-xs"
                       >
                         <span className="icon-[tabler--qrcode] text-sm" aria-hidden="true"></span>
-                        Ver Pase QR
+                        Ver QR
                       </button>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleCancelarPase(pase._id)}
-                      className="btn btn-xs btn-ghost text-error/80 hover:text-error hover:bg-error/10 w-full text-3xs font-semibold"
+                      className="btn btn-xs btn-ghost text-error/70 hover:text-error hover:bg-error/10 p-1"
+                      title="Cancelar autorización"
                     >
-                      Cancelar autorización
+                      <span className="icon-[tabler--trash] text-sm" aria-hidden="true"></span>
                     </button>
                   </div>
                 </div>
@@ -405,14 +389,12 @@ export default function ResidentVisitasPage() {
       {/* Contenido: Historial de Visitas que Ingresaron */}
       {tab === 'historial' && (
         <div className="arch-panel overflow-hidden shadow-xs">
-          <div className="p-4 border-b arch-border">
-            <h3 className="font-bold text-sm text-base-content flex items-center gap-2">
+          <div className="p-3.5 border-b arch-border flex items-center justify-between">
+            <h3 className="font-bold text-xs sm:text-sm text-base-content flex items-center gap-2">
               <span className="icon-[tabler--history] text-primary" aria-hidden="true"></span>
-              Historial de Ingresos Registrados en Portería
+              Historial de Ingresos Registrados
             </h3>
-            <p className="text-2xs text-base-content/65 mt-0.5">
-              Registro legal de todas las personas y domiciliarios que han ingresado a tu apartamento.
-            </p>
+            <span className="badge badge-xs badge-neutral font-mono">{visitas.length} registros</span>
           </div>
 
           {cargando ? (
@@ -490,10 +472,10 @@ export default function ResidentVisitasPage() {
       {modalCrearAbierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="arch-panel w-full max-w-lg p-5 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b arch-border mb-4">
-              <h2 className="text-base font-black text-base-content flex items-center gap-2">
-                <span className="icon-[tabler--id-badge-2] text-primary text-xl" aria-hidden="true"></span>
-                Autorizar Visitante (Generar Pase)
+            <div className="flex items-center justify-between pb-2.5 border-b arch-border mb-3.5">
+              <h2 className="text-sm sm:text-base font-black text-base-content flex items-center gap-2">
+                <span className="icon-[tabler--id-badge-2] text-primary text-lg" aria-hidden="true"></span>
+                Autorizar Visitante
               </h2>
               <button
                 type="button"
@@ -504,64 +486,53 @@ export default function ResidentVisitasPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCrearPase} className="space-y-3.5">
-              {/* Modalidad */}
-              <div>
-                <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1.5">
-                  Modalidad del Pase *
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setModalidad('un_solo_uso')}
-                    className={`p-2.5 rounded-md border text-left transition-colors cursor-pointer ${
-                      modalidad === 'un_solo_uso'
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
-                        : 'arch-border bg-base-100 text-base-content/75 hover:bg-base-200'
-                    }`}
-                  >
-                    <span className="block text-xs font-black">🎟️ Un Solo Uso</span>
-                    <span className="block text-3xs text-base-content/60 mt-0.5">
-                      Para amigos o domicilios puntuales
-                    </span>
-                  </button>
+            <form onSubmit={handleCrearPase} className="space-y-3">
+              {/* Modalidad en Segmented Toggle compacto */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-base-200/60 rounded-lg border arch-border">
+                <button
+                  type="button"
+                  onClick={() => setModalidad('un_solo_uso')}
+                  className={`py-1.5 px-3 rounded-md text-xs font-bold transition-all text-center cursor-pointer ${
+                    modalidad === 'un_solo_uso'
+                      ? 'bg-base-100 text-primary shadow-xs'
+                      : 'text-base-content/60 hover:text-base-content'
+                  }`}
+                >
+                  🎟️ Un Solo Uso
+                </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setModalidad('temporal')}
-                    className={`p-2.5 rounded-md border text-left transition-colors cursor-pointer ${
-                      modalidad === 'temporal'
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
-                        : 'arch-border bg-base-100 text-base-content/75 hover:bg-base-200'
-                    }`}
-                  >
-                    <span className="block text-xs font-black">📅 Temporal (Rango)</span>
-                    <span className="block text-3xs text-base-content/60 mt-0.5">
-                      Contratistas, obras o familiares varios días
-                    </span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setModalidad('temporal')}
+                  className={`py-1.5 px-3 rounded-md text-xs font-bold transition-all text-center cursor-pointer ${
+                    modalidad === 'temporal'
+                      ? 'bg-base-100 text-primary shadow-xs'
+                      : 'text-base-content/60 hover:text-base-content'
+                  }`}
+                >
+                  📅 Temporal
+                </button>
               </div>
 
               {/* Nombre Visitante */}
               <div>
-                <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                  Nombre Completo del Visitante *
+                <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                  Nombre del Visitante *
                 </label>
                 <input
                   type="text"
                   value={nombreVisitante}
                   onChange={(e) => setNombreVisitante(e.target.value)}
                   placeholder="ej: Andrés Felipe Gómez"
-                  className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3.5 py-2 text-sm focus:border-primary font-medium"
+                  className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-2 text-xs focus:border-primary font-medium"
                   required
                 />
               </div>
 
               {/* Motivo */}
               <div>
-                <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                  Motivo de la Visita *
+                <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                  Motivo de Visita *
                 </label>
                 <select
                   value={motivo}
@@ -570,98 +541,98 @@ export default function ResidentVisitasPage() {
                 >
                   <option value="social">Visita Social / Amigos</option>
                   <option value="familiar">Familiar</option>
-                  <option value="contratista">Contratista / Remodelación</option>
-                  <option value="servicio_tecnico">Servicio Técnico / Mantenimiento</option>
-                  <option value="mudanza">Mudanza / Trasteo</option>
+                  <option value="contratista">Contratista / Obra</option>
+                  <option value="servicio_tecnico">Servicio Técnico</option>
+                  <option value="mudanza">Mudanza</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                    {modalidad === 'temporal' ? 'Fecha Inicio *' : 'Fecha de Visita *'}
+                  <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                    {modalidad === 'temporal' ? 'Fecha Inicio *' : 'Fecha Visita *'}
                   </label>
                   <input
                     type="date"
                     value={fechaInicio}
                     onChange={(e) => setFechaInicio(e.target.value)}
-                    className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-2 text-xs focus:border-primary font-mono font-medium"
+                    className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-mono font-medium"
                     required
                   />
                 </div>
 
                 {modalidad === 'temporal' && (
                   <div>
-                    <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                      Fecha Límite / Vencimiento
+                    <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                      Fecha Vencimiento *
                     </label>
                     <input
                       type="date"
                       value={fechaFin}
                       onChange={(e) => setFechaFin(e.target.value)}
-                      className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-2 text-xs focus:border-primary font-mono font-medium"
+                      className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-mono font-medium"
                     />
                   </div>
                 )}
               </div>
 
               {/* Cédula y Placa */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                    Cédula / Documento (Opcional)
+                  <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                    Cédula (Opcional)
                   </label>
                   <input
                     type="text"
                     value={documentoVisitante}
                     onChange={(e) => setDocumentoVisitante(e.target.value)}
                     placeholder="ej: 1018423987"
-                    className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3.5 py-2 text-sm focus:border-primary font-mono"
+                    className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                    Placa Vehicular (Opcional)
+                  <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                    Placa (Opcional)
                   </label>
                   <input
                     type="text"
                     value={placaVehiculo}
                     onChange={(e) => setPlacaVehiculo(e.target.value)}
                     placeholder="ej: ABC123"
-                    className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3.5 py-2 text-sm focus:border-primary font-mono uppercase"
+                    className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-mono uppercase"
                   />
                 </div>
               </div>
 
               {/* Observaciones */}
               <div>
-                <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
+                <label className="block text-2xs font-semibold text-base-content/75 mb-1">
                   Notas para Portería (Opcional)
                 </label>
                 <textarea
                   value={observaciones}
                   onChange={(e) => setObservaciones(e.target.value)}
-                  placeholder="ej: Autorizado para ingresar herramientas de pintura..."
+                  placeholder="ej: Autorizado para herramientas..."
                   rows={2}
-                  className="textarea textarea-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3.5 py-2 text-xs focus:border-primary font-medium"
+                  className="textarea textarea-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-medium"
                 ></textarea>
               </div>
 
-              <div className="pt-3 border-t arch-border flex items-center justify-end gap-2">
+              <div className="pt-2.5 border-t arch-border flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setModalCrearAbierto(false)}
-                  className="btn btn-sm btn-ghost"
+                  className="btn btn-xs btn-ghost"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={guardando}
-                  className="btn btn-sm btn-primary font-bold shadow-xs gap-1.5"
+                  className="btn btn-xs btn-primary font-bold shadow-xs gap-1.5"
                 >
                   {guardando ? (
                     <>
@@ -670,7 +641,7 @@ export default function ResidentVisitasPage() {
                     </>
                   ) : (
                     <>
-                      <span className="icon-[tabler--qrcode] text-base" aria-hidden="true"></span>
+                      <span className="icon-[tabler--qrcode] text-sm" aria-hidden="true"></span>
                       Generar Pase & QR
                     </>
                   )}
@@ -718,11 +689,7 @@ export default function ResidentVisitasPage() {
               )}
             </div>
 
-            <p className="text-2xs text-base-content/60 mb-4 px-2">
-              Presenta este código QR en la garita o dicta el código al vigilante para tu ingreso directo.
-            </p>
-
-            {/* Botones de acción */}
+            {/* Botones de acción directos */}
             <div className="space-y-2">
               <button
                 type="button"

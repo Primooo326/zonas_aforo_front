@@ -83,129 +83,116 @@ export default function MinutaPorteriaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Encabezado Arquitectónico */}
-      <div className="arch-panel p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-        <div>
-          <h1 className="text-xl font-black text-base-content flex items-center gap-2">
+      {/* Encabezado Conciso */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b arch-border">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-base-content flex items-center gap-2">
             <span className="icon-[tabler--notebook] text-primary text-2xl" aria-hidden="true"></span>
-            Minuta Digital de Turno
+            Minuta de Turno
           </h1>
-          <p className="text-xs text-base-content/65 mt-0.5">
-            Bitácora inmutable con trazabilidad legal de eventos, rondas, incidentes y mantenimientos.
-          </p>
+          <span className="badge badge-sm badge-neutral font-mono font-bold">
+            {novedades.length} eventos
+          </span>
         </div>
 
         <button
           onClick={() => setMostrarForm(!mostrarForm)}
-          className="btn btn-sm btn-primary font-bold shadow-xs self-start sm:self-auto cursor-pointer"
+          className="btn btn-xs btn-primary font-bold shadow-xs self-start sm:self-auto cursor-pointer gap-1"
         >
-          <span className="icon-[tabler--plus] text-base" aria-hidden="true"></span>
-          {mostrarForm ? 'Cerrar Formulario' : 'Nueva Novedad'}
+          <span className="icon-[tabler--plus] text-xs" aria-hidden="true"></span>
+          {mostrarForm ? 'Cerrar' : 'Nueva Novedad'}
         </button>
       </div>
 
       {/* Formulario de Nueva Novedad */}
       {mostrarForm && (
-        <div className="arch-panel max-w-2xl mx-auto p-5 sm:p-7 shadow-xs">
-          <h2 className="text-base font-bold text-base-content mb-4 flex items-center gap-2 pb-3 border-b arch-border">
-            <span className="icon-[tabler--pencil-plus] text-primary text-xl" aria-hidden="true"></span>
-            Consignar Novedad en Minuta
-          </h2>
+        <div className="arch-panel max-w-xl mx-auto p-4 sm:p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-2 border-b arch-border mb-3">
+            <h2 className="text-sm font-bold text-base-content flex items-center gap-1.5">
+              <span className="icon-[tabler--pencil-plus] text-primary text-base" aria-hidden="true"></span>
+              Consignar Novedad
+            </h2>
+            <button
+              onClick={() => setMostrarForm(false)}
+              className="btn btn-ghost btn-circle btn-xs"
+            >
+              ✕
+            </button>
+          </div>
 
-          <form onSubmit={handleRegistrar} className="space-y-4">
-            {/* Selector de Severidad */}
+          <form onSubmit={handleRegistrar} className="space-y-3">
+            {/* Selector de Severidad en Segmented Control */}
             <div>
-              <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-2">
-                Clasificación del Evento
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-base-200/60 rounded-lg border arch-border">
                 <button
                   type="button"
                   onClick={() => setSeveridad('rutinaria')}
-                  className={`p-3 rounded-md border text-left transition-colors cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer ${
                     severidad === 'rutinaria'
-                      ? 'bg-primary/10 border-primary text-primary font-bold shadow-xs'
-                      : 'bg-base-100 arch-border text-base-content/70 hover:bg-base-200'
+                      ? 'bg-base-100 text-primary shadow-xs'
+                      : 'text-base-content/60 hover:text-base-content'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-primary" aria-hidden="true"></span>
-                    Rutinaria
-                  </div>
-                  <span className="text-2xs block text-base-content/60 leading-tight">
-                    Ronda de puesto, relevo, sin novedad
-                  </span>
+                  🟢 Rutinaria
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSeveridad('mantenimiento')}
-                  className={`p-3 rounded-md border text-left transition-colors cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer ${
                     severidad === 'mantenimiento'
-                      ? 'bg-warning/10 border-warning text-warning font-bold shadow-xs'
-                      : 'bg-base-100 arch-border text-base-content/70 hover:bg-base-200'
+                      ? 'bg-base-100 text-warning shadow-xs'
+                      : 'text-base-content/60 hover:text-base-content'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-warning" aria-hidden="true"></span>
-                    Mantenimiento
-                  </div>
-                  <span className="text-2xs block text-base-content/60 leading-tight">
-                    Fugas de agua, bombillos, portón, ascensor
-                  </span>
+                  🟡 Mantenimiento
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSeveridad('incidente_grave')}
-                  className={`p-3 rounded-md border text-left transition-colors cursor-pointer ${
+                  className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer ${
                     severidad === 'incidente_grave'
-                      ? 'bg-error/10 border-error text-error font-bold shadow-xs'
-                      : 'bg-base-100 arch-border text-base-content/70 hover:bg-base-200'
+                      ? 'bg-base-100 text-error shadow-xs'
+                      : 'text-base-content/60 hover:text-base-content'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 font-bold text-xs mb-0.5">
-                    <span className="w-2 h-2 rounded-full bg-error" aria-hidden="true"></span>
-                    Incidente Grave
-                  </div>
-                  <span className="text-2xs block text-base-content/60 leading-tight">
-                    Riñas, ruido excesivo, policía, emergencia
-                  </span>
+                  🔴 Incidente
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                Título del Evento
+              <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                Título del Evento *
               </label>
               <input
                 type="text"
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
-                placeholder="ej: Ronda perimetral sin novedad / Fuga de agua en sótano 1"
-                className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3.5 py-2.5 text-sm focus:border-primary font-medium"
+                placeholder="ej: Ronda perimetral sin novedad / Fuga en sótano 1"
+                className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-medium"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                Descripción Detallada
+              <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                Descripción *
               </label>
               <textarea
                 rows={3}
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Describe la situación con detalles de tiempo, modo y lugar..."
-                className="textarea textarea-bordered arch-border bg-base-100 text-base-content w-full rounded-md p-3 text-sm focus:border-primary resize-none font-medium"
+                placeholder="Detalla tiempo, modo y personas involucradas..."
+                className="textarea textarea-bordered arch-border bg-base-100 text-base-content w-full rounded-md px-3 py-1.5 text-xs focus:border-primary font-medium"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-2xs font-bold text-base-content/70 uppercase tracking-wider mb-1">
-                Evidencia Fotográfica (Opcional, hasta 5 fotos)
+              <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                Fotos de Evidencia (Opcional)
               </label>
               <input
                 type="file"
@@ -217,20 +204,26 @@ export default function MinutaPorteriaPage() {
               />
             </div>
 
-            <div className="text-xs text-base-content/60 pt-2 border-t arch-border flex items-center justify-between">
+            <div className="pt-2.5 border-t arch-border flex items-center justify-between text-2xs text-base-content/60">
               <span>
-                Firma:{' '}
-                <strong className="text-base-content">
-                  {vigilanteActivo?.nombreCompleto || 'Vigilante de Turno'}
-                </strong>
+                Firma: <strong className="text-base-content">{vigilanteActivo?.nombreCompleto || 'Vigilante de Turno'}</strong>
               </span>
-              <button
-                type="submit"
-                disabled={guardando}
-                className="btn btn-sm btn-primary font-bold shadow-xs cursor-pointer"
-              >
-                {guardando ? 'Guardando en minuta...' : 'Guardar Novedad'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMostrarForm(false)}
+                  className="btn btn-xs btn-ghost"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardando}
+                  className="btn btn-xs btn-primary font-bold shadow-xs cursor-pointer px-3.5"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar Novedad'}
+                </button>
+              </div>
             </div>
           </form>
         </div>

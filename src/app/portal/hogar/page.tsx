@@ -318,116 +318,94 @@ export default function MiHogarPage() {
         </div>
       )}
 
-      {/* Apartment Header Hero Card */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-6 sm:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-base-200">
+      {/* Apartment Header Panel */}
+      <div className="arch-panel p-4 sm:p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b arch-border">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="badge badge-primary badge-sm font-semibold">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span className="badge badge-primary badge-xs font-semibold">
                 {edificioNombre || 'Copropiedad'}
               </span>
               {esMoroso ? (
-                <span className="badge badge-error badge-sm font-semibold">Mora en Administración</span>
+                <span className="badge badge-error badge-xs font-semibold">Mora</span>
               ) : (
-                <span className="badge badge-success badge-sm font-semibold">Al Día</span>
+                <span className="badge badge-success badge-xs font-semibold">Al Día</span>
               )}
-              <span className="badge badge-neutral badge-sm font-semibold capitalize">
+              <span className="badge badge-neutral badge-xs font-semibold capitalize">
                 {unidad.tipoOcupacion}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-base-content tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-base-content tracking-tight">
               {unidad.torre ? `Torre ${unidad.torre} · ` : ''}
               Apto {unidad.numeroApto || unidad.identificador}
             </h1>
-            <p className="text-xs text-base-content/60 mt-1">
-              Ficha oficial consolidada con la administración del conjunto
-            </p>
           </div>
 
-          <div>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="btn btn-primary rounded-xl min-h-[48px] px-5 font-bold shadow-md touch-manipulation flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>{solicitudPendiente ? 'Modificar Solicitud' : 'Solicitar Actualización'}</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="btn btn-sm btn-primary font-bold shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+          >
+            <span className="icon-[tabler--edit] text-sm" aria-hidden="true"></span>
+            <span>{solicitudPendiente ? 'Ver Solicitud' : 'Actualizar Datos'}</span>
+          </button>
         </div>
 
-        {/* Inmueble specs grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 text-sm">
-          <div className="p-3 bg-base-200/50 rounded-xl">
-            <p className="text-xs text-base-content/60 font-medium">Piso</p>
-            <p className="text-lg font-black text-base-content">{unidad.piso ?? 'N/A'}</p>
-          </div>
-          <div className="p-3 bg-base-200/50 rounded-xl">
-            <p className="text-xs text-base-content/60 font-medium">Área Privada</p>
-            <p className="text-lg font-black text-base-content">
-              {unidad.metrosCuadrados ? `${unidad.metrosCuadrados} m²` : 'N/A'}
-            </p>
-          </div>
-          <div className="p-3 bg-base-200/50 rounded-xl">
-            <p className="text-xs text-base-content/60 font-medium">Coeficiente</p>
-            <p className="text-lg font-black text-base-content">
-              {unidad.coeficiente ? `${unidad.coeficiente}%` : 'N/A'}
-            </p>
-          </div>
-          <div className="p-3 bg-base-200/50 rounded-xl">
-            <p className="text-xs text-base-content/60 font-medium">Habitantes</p>
-            <p className="text-lg font-black text-base-content">{unidad.personas?.length || 0}</p>
-          </div>
+        {/* Spec pills row (compact) */}
+        <div className="flex flex-wrap items-center gap-2 pt-3 text-xs">
+          <span className="badge badge-sm badge-ghost font-medium">
+            Piso: <strong className="ml-1 text-base-content">{unidad.piso ?? 'N/A'}</strong>
+          </span>
+          <span className="badge badge-sm badge-ghost font-medium">
+            Área: <strong className="ml-1 text-base-content">{unidad.metrosCuadrados ? `${unidad.metrosCuadrados} m²` : 'N/A'}</strong>
+          </span>
+          <span className="badge badge-sm badge-ghost font-medium">
+            Coeficiente: <strong className="ml-1 text-base-content">{unidad.coeficiente ? `${unidad.coeficiente}%` : 'N/A'}</strong>
+          </span>
+          <span className="badge badge-sm badge-ghost font-medium">
+            Habitantes: <strong className="ml-1 text-base-content">{unidad.personas?.length || 0}</strong>
+          </span>
         </div>
       </div>
 
       {/* Habitantes Section */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-base-content flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-primary"></span>
+      <div className="arch-panel p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-base-content flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary"></span>
             Habitantes Registrados ({unidad.personas?.length || 0})
           </h2>
-          <span className="text-xs text-base-content/60">Verificados por administración</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {unidad.personas?.map((p, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-xl border border-base-200 bg-base-200/20 hover:border-primary/30 transition-colors flex flex-col justify-between"
+              className="p-3 rounded-lg border arch-border bg-base-200/30 hover:border-primary/30 transition-colors flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="font-black text-base text-base-content truncate">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="font-bold text-sm text-base-content truncate">
                     {p.nombreCompleto}
                   </span>
                   <div className="flex items-center gap-1">
                     {p.esContactoPrincipal && (
-                      <span className="badge badge-primary badge-xs">Principal</span>
+                      <span className="badge badge-primary badge-3xs font-bold">Principal</span>
                     )}
-                    <span className="badge badge-outline badge-sm capitalize text-xs">
+                    <span className="badge badge-ghost badge-3xs capitalize">
                       {p.condicion}
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-1 text-xs text-base-content/70">
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-2xs text-base-content/70">
                   {p.documento && (
-                    <p><span className="font-semibold">Doc:</span> {p.documento}</p>
+                    <span><strong className="text-base-content/50">Doc:</strong> {p.documento}</span>
                   )}
                   {p.telefono && (
-                    <p><span className="font-semibold">Tel:</span> {p.telefono}</p>
+                    <span><strong className="text-base-content/50">Tel:</strong> {p.telefono}</span>
                   )}
                   {p.email && (
-                    <p><span className="font-semibold">Email:</span> {p.email}</p>
-                  )}
-                  {p.fechaNacimiento && (
-                    <p>
-                      <span className="font-semibold">F. Nacimiento:</span>{' '}
-                      {new Date(p.fechaNacimiento).toLocaleDateString('es-CO')}
-                    </p>
+                    <span><strong className="text-base-content/50">Email:</strong> {p.email}</span>
                   )}
                 </div>
               </div>
@@ -437,41 +415,41 @@ export default function MiHogarPage() {
       </div>
 
       {/* Mascotas Section */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-base-content flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+      <div className="arch-panel p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-base-content flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-secondary"></span>
             Mascotas ({unidad.mascotas?.length || 0})
           </h2>
         </div>
 
         {unidad.mascotas && unidad.mascotas.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {unidad.mascotas.map((m, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-xl border border-base-200 bg-base-200/20 flex flex-col justify-between"
+                className="p-3 rounded-lg border arch-border bg-base-200/30 flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-black text-base text-base-content capitalize">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm text-base-content capitalize">
                       {m.nombre}
                     </span>
-                    <span className="badge badge-sm badge-secondary capitalize">
+                    <span className="badge badge-3xs badge-secondary capitalize">
                       {m.tipo}
                     </span>
                   </div>
-                  <p className="text-xs text-base-content/70 mb-1">
-                    <span className="font-semibold">Raza:</span> {m.raza || 'Mestizo'}
+                  <p className="text-2xs text-base-content/70">
+                    Raza: {m.raza || 'Mestizo'}
                   </p>
-                  <div className="flex flex-wrap gap-1 mt-2">
+                  <div className="flex flex-wrap gap-1 mt-1.5">
                     {m.vacunasAlDia ? (
-                      <span className="badge badge-xs badge-success">Vacunas al día</span>
+                      <span className="badge badge-3xs badge-success">Vacunas al día</span>
                     ) : (
-                      <span className="badge badge-xs badge-warning">Vacunas pendientes</span>
+                      <span className="badge badge-3xs badge-warning">Vacunas pendientes</span>
                     )}
                     {m.esPeligroso && (
-                      <span className="badge badge-xs badge-error">Manejo Especial</span>
+                      <span className="badge badge-3xs badge-error">Manejo Especial</span>
                     )}
                   </div>
                 </div>
@@ -479,43 +457,43 @@ export default function MiHogarPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-base-content/60 italic py-2">
-            No hay mascotas registradas para este inmueble.
+          <p className="text-2xs text-base-content/60 italic">
+            No hay mascotas registradas.
           </p>
         )}
       </div>
 
       {/* Vehículos & Parqueaderos Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Vehículos */}
-        <div className="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-6">
-          <h2 className="text-base font-bold text-base-content flex items-center gap-2 mb-4">
-            <span className="w-2.5 h-2.5 rounded-full bg-accent"></span>
+        <div className="arch-panel p-4 sm:p-5 shadow-xs">
+          <h2 className="text-sm font-bold text-base-content flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full bg-accent"></span>
             Vehículos ({unidad.vehiculos?.length || 0})
           </h2>
 
           {unidad.vehiculos && unidad.vehiculos.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {unidad.vehiculos.map((v, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-xl border border-base-200 bg-base-200/30 flex items-center justify-between text-sm"
+                  className="p-2.5 rounded-lg border arch-border bg-base-200/30 flex items-center justify-between text-xs"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-base-300 flex items-center justify-center font-bold text-xs uppercase">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base">
                       {v.tipo === 'moto' ? '🏍️' : v.tipo === 'bicicleta' ? '🚲' : '🚗'}
-                    </div>
+                    </span>
                     <div>
-                      <p className="font-black text-base-content tracking-wider uppercase">
+                      <p className="font-mono font-bold text-base-content uppercase">
                         {v.placa}
                       </p>
-                      <p className="text-xs text-base-content/60 capitalize">
+                      <p className="text-3xs text-base-content/60 capitalize">
                         {v.marca || ''} {v.color ? `· ${v.color}` : ''}
                       </p>
                     </div>
                   </div>
                   {v.numeroParqueadero && (
-                    <span className="badge badge-neutral badge-sm font-semibold">
+                    <span className="badge badge-neutral badge-3xs font-mono font-semibold">
                       Parq: {v.numeroParqueadero}
                     </span>
                   )}
@@ -523,51 +501,51 @@ export default function MiHogarPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-base-content/60 italic py-2">
-              No hay vehículos registrados para este inmueble.
+            <p className="text-2xs text-base-content/60 italic">
+              No hay vehículos registrados.
             </p>
           )}
         </div>
 
         {/* Parqueaderos y Bodegas asignadas */}
-        <div className="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-6">
-          <h2 className="text-base font-bold text-base-content flex items-center gap-2 mb-4">
-            <span className="w-2.5 h-2.5 rounded-full bg-info"></span>
+        <div className="arch-panel p-4 sm:p-5 shadow-xs">
+          <h2 className="text-sm font-bold text-base-content flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full bg-info"></span>
             Zonas Privadas Asignadas
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5 text-xs">
             <div>
-              <p className="text-xs font-semibold text-base-content/70 uppercase tracking-wider mb-1">
-                Parqueaderos Asignados
+              <p className="text-3xs font-bold text-base-content/60 uppercase tracking-wider mb-1">
+                Parqueaderos
               </p>
               {unidad.parqueaderosAsignados && unidad.parqueaderosAsignados.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {unidad.parqueaderosAsignados.map((p, idx) => (
-                    <span key={idx} className="badge badge-info badge-outline font-bold p-3 rounded-xl">
+                    <span key={idx} className="badge badge-info badge-outline font-bold text-2xs">
                       #{p.numero} ({p.tipo})
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-base-content/60 italic">Sin parqueadero fijo asignado</p>
+                <p className="text-2xs text-base-content/60 italic">Sin parqueadero fijo</p>
               )}
             </div>
 
-            <div className="pt-2">
-              <p className="text-xs font-semibold text-base-content/70 uppercase tracking-wider mb-1">
-                Bodegas Asignadas
+            <div className="pt-2 border-t arch-border">
+              <p className="text-3xs font-bold text-base-content/60 uppercase tracking-wider mb-1">
+                Bodegas / Depósitos
               </p>
               {unidad.bodegasAsignadas && unidad.bodegasAsignadas.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {unidad.bodegasAsignadas.map((b, idx) => (
-                    <span key={idx} className="badge badge-neutral badge-outline font-bold p-3 rounded-xl">
-                      Bodega #{b.numero} {b.ubicacion ? `(${b.ubicacion})` : ''}
+                    <span key={idx} className="badge badge-neutral badge-outline font-bold text-2xs">
+                      #{b.numero} {b.ubicacion ? `(${b.ubicacion})` : ''}
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-base-content/60 italic">Sin depósito / bodega asignada</p>
+                <p className="text-2xs text-base-content/60 italic">Sin depósito asignado</p>
               )}
             </div>
           </div>

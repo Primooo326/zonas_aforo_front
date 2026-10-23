@@ -27,110 +27,103 @@ export default function CasilleroResidentePage() {
   const entregados = paquetes.filter((p) => p.estado === 'entregado');
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-      {/* Encabezado */}
-      <div className="bg-base-100 p-6 rounded-2xl border border-base-300 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-              📦
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-base-content tracking-tight">
-                Mi Casillero Digital
-              </h1>
-              <p className="text-xs text-base-content/70 mt-0.5">
-                Seguimiento de correspondencia física, paquetes y encomiendas recibidas en portería.
-              </p>
-            </div>
-          </div>
+    <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      {/* Encabezado Conciso */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b arch-border">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-base-content flex items-center gap-2">
+            <span className="icon-[tabler--package] text-primary text-2xl sm:text-3xl" aria-hidden="true"></span>
+            Mi Casillero
+          </h1>
+          <span className="badge badge-sm badge-warning font-mono font-bold">
+            {pendientes.length} pendientes
+          </span>
         </div>
 
         <button
           onClick={cargarPaquetes}
-          className="btn btn-sm btn-ghost gap-1.5 self-start sm:self-auto"
+          className="btn btn-xs btn-outline arch-border font-bold gap-1 self-start sm:self-auto cursor-pointer"
         >
-          <span className="icon-[tabler--refresh] text-base"></span>
+          <span className="icon-[tabler--refresh] text-xs"></span>
           Actualizar
         </button>
       </div>
 
       {/* Paquetes Pendientes por Retirar */}
       <div className="space-y-3">
-        <h2 className="text-sm font-bold text-base-content uppercase tracking-wider flex items-center gap-2">
-          <span>Por Retirar en Portería</span>
-          <span className="badge badge-sm badge-primary font-bold">
-            {pendientes.length}
-          </span>
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold text-base-content uppercase tracking-wider flex items-center gap-1.5">
+            <span>Paquetes por Retirar</span>
+            <span className="badge badge-3xs badge-primary font-bold">{pendientes.length}</span>
+          </h2>
+        </div>
 
         {cargando ? (
-          <div className="text-center py-12 text-base-content/60 text-sm">
+          <div className="text-center py-10 text-base-content/60 text-xs">
             <span className="loading loading-spinner loading-md text-primary mb-2"></span>
-            <p>Consultando casillero en portería...</p>
+            <p>Consultando casillero...</p>
           </div>
         ) : pendientes.length === 0 ? (
-          <div className="bg-base-100 border border-base-300 rounded-2xl p-8 text-center">
-            <span className="text-3xl mb-2 block">📭</span>
+          <div className="arch-panel p-8 text-center shadow-xs">
+            <span className="icon-[tabler--package-off] text-3xl text-base-content/30 mb-2 block mx-auto"></span>
             <p className="text-sm font-bold text-base-content">
               No tienes paquetes pendientes por retirar
             </p>
-            <p className="text-xs text-base-content/60 mt-0.5">
-              Cuando la portería reciba una encomienda a tu nombre o apartamento, aparecerá aquí inmediatamente.
+            <p className="text-2xs text-base-content/60 mt-0.5">
+              Las nuevas encomiendas recibidas en portería aparecerán aquí.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {pendientes.map((p) => (
               <div
                 key={p._id}
-                className="bg-base-100 border-2 border-primary/40 rounded-2xl p-5 shadow-sm space-y-3"
+                className="arch-panel p-4 shadow-xs space-y-2.5 border-l-4 border-l-warning"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm text-base-content flex items-center gap-1.5">
-                    🚚 {p.transportadora}
+                    <span className="icon-[tabler--truck-delivery] text-primary" aria-hidden="true"></span>
+                    {p.transportadora}
                   </span>
-                  <span className="badge badge-sm badge-warning font-bold animate-pulse">
-                    Disponible en Portería
+                  <span className="badge badge-3xs badge-warning font-bold">
+                    En Portería
                   </span>
                 </div>
 
-                <div className="text-xs text-base-content/80 space-y-1">
-                  <p>
-                    Tipo: <strong className="capitalize">{p.tipo}</strong>
-                  </p>
-                  {p.observaciones && (
-                    <p className="italic text-base-content/70">
-                      &ldquo;{p.observaciones}&rdquo;
-                    </p>
-                  )}
-                  <p className="text-base-content/60">
-                    Recibido el:{' '}
+                <div className="flex flex-wrap items-center gap-2 text-2xs text-base-content/75">
+                  <span className="badge badge-xs badge-ghost capitalize font-medium">
+                    {p.tipo}
+                  </span>
+                  <span className="font-mono text-3xs text-base-content/60">
+                    Recibido:{' '}
                     {new Date(p.fechaRecepcion).toLocaleString('es-CO', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
                     })}
-                  </p>
+                  </span>
                 </div>
 
-                {p.fotoGuiaUrl && (
-                  <div className="pt-2">
+                {p.observaciones && (
+                  <p className="text-3xs italic text-base-content/65 truncate">
+                    &ldquo;{p.observaciones}&rdquo;
+                  </p>
+                )}
+
+                <div className="pt-2 border-t arch-border text-3xs text-base-content/60 flex items-center justify-between">
+                  <span>Recibió: <strong className="text-base-content/80 font-medium">{p.vigilanteRecibioNombre}</strong></span>
+                  {p.fotoGuiaUrl && (
                     <a
                       href={p.fotoGuiaUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                      className="text-primary font-bold hover:underline flex items-center gap-1"
                     >
-                      📷 Ver foto de la guía o paquete
+                      <span className="icon-[tabler--photo] text-xs"></span>
+                      Ver foto
                     </a>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t border-base-300 text-[11px] text-base-content/60 flex items-center justify-between">
-                  <span>Recibió en portería: {p.vigilanteRecibioNombre}</span>
-                  <span className="font-semibold text-primary">
-                    Pasa a portería con tu documento
-                  </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -140,37 +133,39 @@ export default function CasilleroResidentePage() {
 
       {/* Historial de Entregas */}
       {entregados.length > 0 && (
-        <div className="space-y-3 pt-6 border-t border-base-300">
-          <h2 className="text-sm font-bold text-base-content uppercase tracking-wider flex items-center gap-2">
-            <span>Histórico de Entregas Anteriores</span>
-            <span className="badge badge-sm badge-ghost font-bold">
-              {entregados.length}
-            </span>
-          </h2>
+        <div className="space-y-3 pt-4 border-t arch-border">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Historial de Entregas</span>
+              <span className="badge badge-3xs badge-neutral font-bold">{entregados.length}</span>
+            </h2>
+          </div>
 
-          <div className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden shadow-sm">
+          <div className="arch-panel overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="table table-sm w-full text-xs">
+              <table className="table table-xs w-full text-base-content">
                 <thead>
-                  <tr className="border-b border-base-300 bg-base-200/50 text-base-content/70">
+                  <tr className="border-b arch-border bg-base-200/50 text-2xs text-base-content/60 uppercase">
                     <th>Transportadora</th>
                     <th>Tipo</th>
                     <th>Retirado por</th>
-                    <th>Fecha de Entrega</th>
-                    <th>Guardia que entregó</th>
+                    <th>Fecha Retiro</th>
+                    <th>Guardia</th>
                   </tr>
                 </thead>
                 <tbody>
                   {entregados.map((e) => (
-                    <tr key={e._id} className="border-b border-base-300 hover:bg-base-200/30">
+                    <tr key={e._id} className="border-b arch-border hover:bg-base-200/30">
                       <td className="font-bold text-base-content">{e.transportadora}</td>
                       <td className="capitalize">{e.tipo}</td>
-                      <td className="font-semibold text-success">{e.entregadoA || 'Residente'}</td>
-                      <td className="text-base-content/70">
+                      <td className="font-medium text-success">{e.entregadoA || 'Residente'}</td>
+                      <td className="font-mono text-3xs text-base-content/70">
                         {e.fechaEntrega
-                          ? new Date(e.fechaEntrega).toLocaleString('es-CO', {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
+                          ? new Date(e.fechaEntrega).toLocaleDateString('es-CO', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
                             })
                           : '-'}
                       </td>

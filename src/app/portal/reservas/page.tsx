@@ -170,24 +170,25 @@ export default function ReservasPortalPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black text-base-content tracking-tight">
-          Zonas Comunes & Reservas
-        </h1>
-        <p className="text-xs sm:text-sm text-base-content/70 mt-1">
-          Consulta aforos, disponibilidad de horarios y aparta espacios para tu inmueble
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b arch-border">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-base-content flex items-center gap-2">
+            <span className="icon-[tabler--calendar-event] text-primary text-2xl sm:text-3xl" aria-hidden="true"></span>
+            Zonas Comunes & Reservas
+          </h1>
+          <span className="badge badge-sm badge-neutral font-mono font-bold">
+            {zonas.length} disponibles
+          </span>
+        </div>
       </div>
 
       {/* Alert Messages */}
       {successMsg && (
-        <div className="alert alert-success rounded-2xl shadow-md py-3 text-sm flex items-center justify-between">
+        <div className="alert alert-success py-2.5 px-4 text-xs flex items-center justify-between rounded-lg">
           <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
+            <span className="icon-[tabler--check] text-base shrink-0"></span>
             <span>{successMsg}</span>
           </div>
           <button onClick={() => setSuccessMsg('')} className="btn btn-ghost btn-xs">✕</button>
@@ -195,112 +196,87 @@ export default function ReservasPortalPage() {
       )}
 
       {error && (
-        <div className="alert alert-error rounded-2xl shadow-sm p-4 text-sm">
+        <div className="alert alert-error py-2.5 px-4 text-xs rounded-lg">
           <span>{error}</span>
         </div>
       )}
 
       {/* Moroso Notice */}
       {esMoroso && (
-        <div className="alert alert-error rounded-2xl shadow-sm p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <div>
-            <p className="font-bold">Reservas Restringidas por Mora en Administración</p>
-            <p className="text-xs opacity-90 mt-0.5">
-              El apartamento presenta mora en sus cuotas de administración. De acuerdo con el reglamento de propiedad horizontal, la reserva de zonas comunes queda suspendida hasta encontrarse a paz y salvo.
-            </p>
-          </div>
+        <div className="alert alert-error py-3 px-4 text-xs rounded-lg flex items-center gap-2.5">
+          <span className="icon-[tabler--alert-circle] text-lg shrink-0" aria-hidden="true"></span>
+          <span><strong>Reservas restringidas:</strong> Tu unidad presenta mora en administración.</span>
         </div>
       )}
 
       {/* Catalog of Common Areas */}
-      <div>
-        <h2 className="text-lg font-bold text-base-content flex items-center gap-2 mb-4">
-          <span className="w-2.5 h-2.5 rounded-full bg-primary"></span>
-          Zonas Disponibles ({zonas.length})
+      <div className="space-y-3">
+        <h2 className="text-xs font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+          <span>Zonas Comunes</span>
+          <span className="badge badge-3xs badge-primary font-bold">{zonas.length}</span>
         </h2>
 
         {zonas.length === 0 ? (
-          <div className="card bg-base-100 border border-base-300 p-8 rounded-2xl text-center">
-            <p className="text-sm text-base-content/60 italic">
-              No hay zonas comunes configuradas por la administración en este momento.
+          <div className="arch-panel p-8 text-center shadow-xs">
+            <p className="text-xs text-base-content/60 italic">
+              No hay zonas comunes configuradas en este momento.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {zonas.map((zona) => (
               <div
                 key={zona._id}
-                className={`card bg-base-100 border shadow-sm rounded-2xl overflow-hidden flex flex-col justify-between transition-all ${
-                  zona.enMantenimiento ? 'border-warning/50 opacity-80' : 'border-base-300 hover:border-primary/40'
+                className={`arch-panel p-4 flex flex-col justify-between shadow-xs transition-colors ${
+                  zona.enMantenimiento ? 'opacity-70 border-warning/40' : 'hover:border-primary/40'
                 }`}
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-black text-lg text-base-content tracking-tight">
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <h3 className="font-bold text-sm text-base-content">
                       {zona.nombre}
                     </h3>
                     {zona.enMantenimiento ? (
-                      <span className="badge badge-warning badge-sm font-semibold shrink-0">
-                        En Mantenimiento
+                      <span className="badge badge-warning badge-3xs font-semibold shrink-0">
+                        Mantenimiento
                       </span>
                     ) : (
-                      <span className="badge badge-success badge-sm font-semibold shrink-0">
+                      <span className="badge badge-success badge-3xs font-semibold shrink-0">
                         Disponible
                       </span>
                     )}
                   </div>
 
                   {zona.descripcion && (
-                    <p className="text-xs text-base-content/70 line-clamp-2 mb-4">
+                    <p className="text-2xs text-base-content/65 line-clamp-2 mb-2.5">
                       {zona.descripcion}
                     </p>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-base-200/50 p-3 rounded-xl mb-4">
-                    <div>
-                      <span className="text-base-content/60 font-medium block">Aforo Máximo</span>
-                      <span className="font-extrabold text-base text-base-content">
-                        {zona.aforoMaximo} personas
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-base-content/60 font-medium block">Turno</span>
-                      <span className="font-extrabold text-base text-base-content">
-                        {zona.lapsoMinutos} min
-                      </span>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mb-3 text-3xs">
+                    <span className="badge badge-xs badge-ghost font-medium">
+                      👥 Máx: {zona.aforoMaximo} pers.
+                    </span>
+                    <span className="badge badge-xs badge-ghost font-medium">
+                      ⏱️ Turno: {zona.lapsoMinutos} min
+                    </span>
                   </div>
 
                   {/* Maintenance reason if active */}
                   {zona.enMantenimiento && zona.motivoMantenimiento && (
-                    <p className="text-xs text-warning-content bg-warning/10 p-2.5 rounded-lg mb-3">
+                    <p className="text-3xs text-warning bg-warning/10 p-2 rounded mb-2">
                       ⚠️ {zona.motivoMantenimiento}
                     </p>
                   )}
-
-                  {/* Horarios preview */}
-                  {zona.horarios && zona.horarios.length > 0 && (
-                    <div className="text-[11px] text-base-content/60 space-y-0.5">
-                      <p className="font-semibold text-base-content/80">Horarios:</p>
-                      <p className="truncate">
-                        {zona.horarios.map((h) => `${h.dia.slice(0, 3)}: ${h.inicio}-${h.fin}`).join(' · ')}
-                      </p>
-                    </div>
-                  )}
                 </div>
 
-                <div className="p-4 pt-0">
-                  <button
-                    onClick={() => abrirReservaModal(zona)}
-                    disabled={esMoroso || zona.enMantenimiento}
-                    className="btn btn-primary w-full rounded-xl min-h-[44px] font-bold text-sm shadow-sm touch-manipulation"
-                  >
-                    {zona.enMantenimiento ? 'Zona en Mantenimiento' : esMoroso ? 'Restringido por Mora' : 'Reservar Zona'}
-                  </button>
-                </div>
+                <button
+                  onClick={() => abrirReservaModal(zona)}
+                  disabled={esMoroso || zona.enMantenimiento}
+                  className="btn btn-xs btn-primary w-full font-bold shadow-xs cursor-pointer"
+                >
+                  {zona.enMantenimiento ? 'En Mantenimiento' : esMoroso ? 'Restringido' : 'Reservar Espacio'}
+                </button>
               </div>
             ))}
           </div>
@@ -308,38 +284,36 @@ export default function ReservasPortalPage() {
       </div>
 
       {/* Historial de Reservas del Inmueble */}
-      <div>
-        <h2 className="text-lg font-bold text-base-content flex items-center gap-2 mb-4">
-          <span className="w-2.5 h-2.5 rounded-full bg-accent"></span>
-          Mis Reservas ({reservas.length})
+      <div className="space-y-3 pt-3 border-t arch-border">
+        <h2 className="text-xs font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+          <span>Mis Reservas</span>
+          <span className="badge badge-3xs badge-neutral font-bold">{reservas.length}</span>
         </h2>
 
         {reservas.length === 0 ? (
-          <div className="card bg-base-100 border border-base-300 p-8 rounded-2xl text-center">
-            <p className="text-sm text-base-content/60 italic">
+          <div className="arch-panel p-6 text-center shadow-xs">
+            <p className="text-2xs text-base-content/60 italic">
               Aún no tienes reservas registradas para tu inmueble.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {reservas.map((reserva) => {
               const esActiva = reserva.estado === 'activa' || reserva.estado === 'aprobada';
               return (
                 <div
                   key={reserva._id}
-                  className="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                  className="arch-panel p-3 sm:p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0">
-                      📅
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📅</span>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-base text-base-content">
+                        <span className="font-bold text-sm text-base-content">
                           {reserva.zonaId?.nombre || 'Zona Común'}
                         </span>
                         <span
-                          className={`badge badge-sm font-semibold capitalize ${
+                          className={`badge badge-3xs font-bold capitalize ${
                             reserva.estado === 'aprobada' || reserva.estado === 'activa'
                               ? 'badge-success'
                               : reserva.estado === 'cancelada'
@@ -350,15 +324,13 @@ export default function ReservasPortalPage() {
                           {reserva.estado}
                         </span>
                       </div>
-                      <p className="text-xs text-base-content/70 mt-1">
-                        <span className="font-semibold">Fecha:</span> {reserva.fecha} ·{' '}
-                        <span className="font-semibold">Horario:</span> {reserva.horaInicio} a {reserva.horaFin}
-                      </p>
-                      <p className="text-xs text-base-content/60 mt-0.5">
-                        Solicitante: <span className="font-medium">{reserva.nombreSolicitante}</span>
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-2xs text-base-content/70 mt-0.5">
+                        <span className="font-mono">📅 {reserva.fecha}</span>
+                        <span className="font-mono">⏰ {reserva.horaInicio} - {reserva.horaFin}</span>
+                        <span>· {reserva.nombreSolicitante}</span>
+                      </div>
                       {reserva.motivoRechazo && (
-                        <p className="text-xs text-error mt-1 italic">
+                        <p className="text-3xs text-error mt-0.5 italic">
                           Motivo: {reserva.motivoRechazo}
                         </p>
                       )}
@@ -366,14 +338,12 @@ export default function ReservasPortalPage() {
                   </div>
 
                   {esActiva && (
-                    <div className="shrink-0 w-full sm:w-auto">
-                      <button
-                        onClick={() => handleCancelarReserva(reserva._id)}
-                        className="btn btn-outline btn-error btn-sm rounded-xl w-full sm:w-auto font-semibold"
-                      >
-                        Cancelar Reserva
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleCancelarReserva(reserva._id)}
+                      className="btn btn-ghost btn-xs text-error hover:bg-error/10 font-semibold self-end sm:self-auto"
+                    >
+                      Cancelar
+                    </button>
                   )}
                 </div>
               );
@@ -384,75 +354,73 @@ export default function ReservasPortalPage() {
 
       {/* Booking Modal */}
       {modalOpen && selectedZona && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="p-6 border-b border-base-200 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="arch-panel w-full max-w-md p-5 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between pb-2.5 border-b arch-border mb-3.5">
               <div>
-                <h3 className="text-xl font-black text-base-content">
+                <h3 className="text-base font-black text-base-content">
                   Reservar {selectedZona.nombre}
                 </h3>
-                <p className="text-xs text-base-content/70 mt-0.5">
-                  Turno de {selectedZona.lapsoMinutos} minutos · Aforo máx: {selectedZona.aforoMaximo}
-                </p>
+                <span className="badge badge-3xs badge-neutral font-medium">
+                  Turno: {selectedZona.lapsoMinutos} min · Aforo: {selectedZona.aforoMaximo} pers.
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="btn btn-ghost btn-circle btn-sm"
+                className="btn btn-ghost btn-circle btn-xs"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCrearReserva} className="p-6 space-y-4">
+            <form onSubmit={handleCrearReserva} className="space-y-3">
               {bookingError && (
-                <div className="alert alert-error rounded-xl py-2.5 text-xs">
+                <div className="alert alert-error py-2 text-xs rounded">
                   <span>{bookingError}</span>
                 </div>
               )}
 
-              {/* Date */}
-              <div className="form-control">
-                <label className="label pb-1.5 font-bold text-xs uppercase tracking-wider text-base-content/80">
-                  Fecha de la Reserva *
-                </label>
-                <input
-                  type="date"
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="input input-bordered rounded-xl w-full text-base min-h-[48px]"
-                />
-              </div>
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                    Fecha *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="input input-bordered arch-border bg-base-100 text-xs w-full rounded-md px-3 py-1.5 focus:border-primary font-mono"
+                  />
+                </div>
 
-              {/* Time */}
-              <div className="form-control">
-                <label className="label pb-1.5 font-bold text-xs uppercase tracking-wider text-base-content/80">
-                  Hora de Inicio *
-                </label>
-                <input
-                  type="time"
-                  required
-                  value={horaInicio}
-                  onChange={(e) => setHoraInicio(e.target.value)}
-                  className="input input-bordered rounded-xl w-full text-base min-h-[48px]"
-                />
-                <span className="text-[11px] text-base-content/60 mt-1">
-                  La hora de fin se calcula automáticamente según el turno de {selectedZona.lapsoMinutos} min.
-                </span>
+                <div>
+                  <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                    Hora de Inicio *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={horaInicio}
+                    onChange={(e) => setHoraInicio(e.target.value)}
+                    className="input input-bordered arch-border bg-base-100 text-xs w-full rounded-md px-3 py-1.5 focus:border-primary font-mono"
+                  />
+                </div>
               </div>
 
               {/* Applicant Name */}
-              <div className="form-control">
-                <label className="label pb-1.5 font-bold text-xs uppercase tracking-wider text-base-content/80">
-                  Nombre del Solicitante *
+              <div>
+                <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                  Solicitante *
                 </label>
                 {personas.length > 0 ? (
                   <select
                     value={nombreSolicitante}
                     onChange={(e) => setNombreSolicitante(e.target.value)}
-                    className="select select-bordered rounded-xl w-full text-base min-h-[48px]"
+                    className="select select-bordered arch-border bg-base-100 text-xs w-full rounded-md px-3 py-1.5 focus:border-primary"
                   >
                     {personas.map((p, idx) => (
                       <option key={idx} value={p.nombreCompleto}>
@@ -466,44 +434,44 @@ export default function ReservasPortalPage() {
                     required
                     value={nombreSolicitante}
                     onChange={(e) => setNombreSolicitante(e.target.value)}
-                    placeholder="Nombre de quien usará la zona"
-                    className="input input-bordered rounded-xl w-full text-base min-h-[48px]"
+                    placeholder="Nombre del solicitante"
+                    className="input input-bordered arch-border bg-base-100 text-xs w-full rounded-md px-3 py-1.5 focus:border-primary"
                   />
                 )}
               </div>
 
               {/* Contact Phone */}
-              <div className="form-control">
-                <label className="label pb-1.5 font-bold text-xs uppercase tracking-wider text-base-content/80">
-                  Teléfono de Contacto
+              <div>
+                <label className="block text-2xs font-semibold text-base-content/75 mb-1">
+                  Teléfono de Contacto (Opcional)
                 </label>
                 <input
                   type="tel"
                   value={telefonoContacto}
                   onChange={(e) => setTelefonoContacto(e.target.value)}
-                  placeholder="Ej. 3001234567"
-                  className="input input-bordered rounded-xl w-full text-base min-h-[48px]"
+                  placeholder="ej: 3001234567"
+                  className="input input-bordered arch-border bg-base-100 text-xs w-full rounded-md px-3 py-1.5 focus:border-primary font-mono"
                 />
               </div>
 
               {/* Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-base-200">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t arch-border">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="btn btn-ghost rounded-xl min-h-[44px]"
+                  className="btn btn-ghost btn-xs"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={bookingLoading}
-                  className="btn btn-primary rounded-xl min-h-[48px] px-6 font-bold shadow-md"
+                  className="btn btn-primary btn-xs font-bold shadow-xs px-4"
                 >
                   {bookingLoading ? (
                     <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      <span>Verificando Aforo...</span>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Verificando...</span>
                     </>
                   ) : (
                     <span>Confirmar Reserva</span>

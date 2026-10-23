@@ -154,19 +154,19 @@ export default function VisitasPorteriaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Encabezado Arquitectónico */}
-      <div className="arch-panel p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-        <div>
-          <h1 className="text-xl font-black text-base-content flex items-center gap-2">
+      {/* Encabezado Conciso y Selector de Vistas */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b arch-border">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-base-content flex items-center gap-2">
             <span className="icon-[tabler--users] text-primary text-2xl" aria-hidden="true"></span>
-            Control de Visitas & Accesos
+            Control de Visitas
           </h1>
-          <p className="text-xs text-base-content/65 mt-0.5">
-            Registro de ingresos y salidas en tiempo real de visitantes, domiciliarios y vehículos.
-          </p>
+          <span className="badge badge-sm badge-info font-mono font-bold">
+            {activas.length} adentro
+          </span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-base-200 p-1 rounded-md border arch-border self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-base-200 p-1 rounded-md border arch-border self-start sm:self-auto">
           <button
             onClick={() => setTab('activas')}
             className={`btn btn-xs font-bold transition-colors ${
@@ -185,9 +185,9 @@ export default function VisitasPorteriaPage() {
                 : 'btn-ghost text-base-content/70 hover:text-base-content'
             }`}
           >
-            <span>Visitas Esperadas</span>
-            <span className={`badge badge-xs font-mono font-bold ${
-              tab === 'programadas' ? 'bg-primary-content text-primary' : 'badge-warning text-warning-content'
+            <span>Esperadas</span>
+            <span className={`badge badge-3xs font-mono font-bold ${
+              tab === 'programadas' ? 'bg-primary-content text-primary' : 'badge-warning'
             }`}>
               {programadas.length}
             </span>
@@ -200,7 +200,7 @@ export default function VisitasPorteriaPage() {
                 : 'btn-ghost text-base-content/70 hover:text-base-content'
             }`}
           >
-            + Registrar Ingreso
+            + Ingreso
           </button>
           <button
             onClick={() => setTab('historial')}
@@ -210,7 +210,7 @@ export default function VisitasPorteriaPage() {
                 : 'btn-ghost text-base-content/70 hover:text-base-content'
             }`}
           >
-            Historial Salidas
+            Historial
           </button>
         </div>
       </div>
@@ -375,61 +375,59 @@ export default function VisitasPorteriaPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {activas.map((v) => (
                 <div
                   key={v._id}
-                  className="arch-panel p-4 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs"
+                  className="arch-panel p-3 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-2.5 py-1 rounded-md bg-base-200 text-base-content font-mono font-bold text-xs border arch-border">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="px-2 py-0.5 rounded bg-base-200 text-base-content font-mono font-bold text-xs border arch-border">
                         {v.torre ? `Torre ${v.torre} - ` : ''}Apto {v.apartamento}
                       </span>
-                      <span className="badge badge-xs badge-info font-bold animate-pulse">
+                      <span className="badge badge-3xs badge-info font-bold animate-pulse">
                         Adentro
                       </span>
                     </div>
 
-                    <h3 className="font-bold text-sm text-base-content mb-0.5">{v.nombreVisitante}</h3>
-                    
-                    {v.residenteAQuienVisita && (
-                      <p className="text-2xs text-base-content/80 font-medium flex items-center gap-1 mt-0.5">
-                        <span className="icon-[tabler--user] text-primary" aria-hidden="true"></span>
-                        Visita a: <strong className="text-base-content">{v.residenteAQuienVisita}</strong>
-                      </p>
-                    )}
+                    <h3 className="font-bold text-sm text-base-content leading-snug">{v.nombreVisitante}</h3>
 
-                    {v.documentoVisitante && (
-                      <p className="text-2xs text-base-content/60 mt-0.5">CC: {v.documentoVisitante}</p>
-                    )}
-                    {v.placaVehiculo && (
-                      <p className="text-xs text-primary font-mono font-bold mt-1">
-                        🚗 Placa: {v.placaVehiculo}
-                      </p>
-                    )}
-                    {v.empresa && (
-                      <p className="text-2xs text-base-content/75 mt-0.5">Empresa: {v.empresa}</p>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-3xs">
+                      {v.residenteAQuienVisita && (
+                        <span className="badge badge-xs badge-ghost font-medium">
+                          👤 {v.residenteAQuienVisita}
+                        </span>
+                      )}
+                      {v.placaVehiculo && (
+                        <span className="badge badge-xs bg-primary/10 text-primary border-primary/20 font-mono font-bold">
+                          🚗 {v.placaVehiculo}
+                        </span>
+                      )}
+                      {v.empresa && (
+                        <span className="badge badge-xs badge-ghost">
+                          🏢 {v.empresa}
+                        </span>
+                      )}
+                    </div>
 
-                    <div className="text-3xs text-base-content/50 pt-2 mt-2 border-t arch-border flex items-center justify-between">
-                      <span className="tabular-nums font-mono">
-                        Ingreso:{' '}
+                    <div className="text-3xs text-base-content/50 pt-2 mt-2 border-t arch-border flex items-center justify-between font-mono">
+                      <span>
                         {new Date(v.fechaIngreso).toLocaleTimeString('es-CO', {
                           hour: '2-digit',
                           minute: '2-digit',
                           hour12: true,
                         })}
                       </span>
-                      <span>Por: {v.vigilanteIngresoNombre}</span>
+                      <span>{v.vigilanteIngresoNombre}</span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleRegistrarSalida(v._id)}
-                    className="btn btn-sm btn-outline arch-border hover:btn-error w-full mt-3 gap-1.5 font-bold text-xs cursor-pointer shadow-xs"
+                    className="btn btn-xs btn-outline arch-border hover:btn-error w-full mt-2.5 gap-1 font-bold text-2xs cursor-pointer shadow-xs"
                   >
-                    <span className="icon-[tabler--door-exit] text-sm" aria-hidden="true"></span>
+                    <span className="icon-[tabler--door-exit] text-xs" aria-hidden="true"></span>
                     Registrar Salida
                   </button>
                 </div>
@@ -491,72 +489,56 @@ export default function VisitasPorteriaPage() {
                 .map((p) => (
                   <div
                     key={p._id}
-                    className="arch-panel p-4 flex flex-col justify-between hover:border-primary/50 transition-colors shadow-xs border-l-4 border-l-primary"
+                    className="arch-panel p-3 flex flex-col justify-between hover:border-primary/50 transition-colors shadow-xs border-l-4 border-l-primary"
                   >
                     <div>
-                      <div className="flex items-center justify-between gap-1 mb-2">
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
                         <span className="px-2 py-0.5 rounded bg-base-200 text-base-content font-mono font-bold text-xs border arch-border">
                           {p.torre ? `Torre ${p.torre} - ` : ''}Apto {p.apartamento}
                         </span>
-                        <div className="flex items-center gap-1">
-                          <span className="badge badge-xs badge-neutral uppercase font-mono font-bold tracking-wider">
-                            {p.modalidad === 'temporal' ? 'Temporal' : 'Único uso'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-black text-sm text-base-content">{p.nombreVisitante}</h3>
                         <span className="font-mono text-2xs font-extrabold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
                           {p.codigoAcceso}
                         </span>
                       </div>
 
-                      <p className="text-2xs text-base-content/80 font-medium flex items-center gap-1 mt-0.5">
-                        <span className="icon-[tabler--user-check] text-primary" aria-hidden="true"></span>
-                        Autorizado por: <strong className="text-base-content">{p.residenteNombre}</strong>
-                      </p>
+                      <h3 className="font-bold text-sm text-base-content leading-snug">{p.nombreVisitante}</h3>
 
-                      <div className="mt-2 space-y-1 text-2xs text-base-content/75 bg-base-200/50 p-2 rounded border arch-border">
-                        {p.documentoVisitante && (
-                          <p className="flex items-center justify-between">
-                            <span className="text-base-content/60">Documento:</span>
-                            <span className="font-medium font-mono">{p.documentoVisitante}</span>
-                          </p>
-                        )}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-3xs">
+                        <span className="badge badge-xs badge-ghost font-medium">
+                          👤 {p.residenteNombre}
+                        </span>
+                        <span className="badge badge-xs badge-ghost capitalize">
+                          🎟️ {p.motivo}
+                        </span>
                         {p.placaVehiculo && (
-                          <p className="flex items-center justify-between">
-                            <span className="text-base-content/60">Vehículo:</span>
-                            <span className="font-mono font-bold text-primary">🚗 {p.placaVehiculo}</span>
-                          </p>
-                        )}
-                        <p className="flex items-center justify-between">
-                          <span className="text-base-content/60">Motivo:</span>
-                          <span className="font-semibold capitalize">{p.motivo}</span>
-                        </p>
-                        {p.observaciones && (
-                          <p className="text-3xs italic text-base-content/70 pt-1 border-t arch-border">
-                            &quot;{p.observaciones}&quot;
-                          </p>
+                          <span className="badge badge-xs bg-primary/10 text-primary border-primary/20 font-mono font-bold">
+                            🚗 {p.placaVehiculo}
+                          </span>
                         )}
                       </div>
+
+                      {p.observaciones && (
+                        <p className="text-3xs italic text-base-content/65 mt-1.5 truncate border-t arch-border pt-1">
+                          &ldquo;{p.observaciones}&rdquo;
+                        </p>
+                      )}
                     </div>
 
-                    <div className="mt-3 pt-2.5 border-t arch-border">
+                    <div className="mt-2.5 pt-2 border-t arch-border">
                       <button
                         onClick={() => handleRegistrarIngresoProgramado(p)}
                         disabled={procesandoIngresoId === p._id}
-                        className="btn btn-sm btn-primary w-full gap-1.5 font-bold text-xs cursor-pointer shadow-xs"
+                        className="btn btn-xs btn-primary w-full gap-1 font-bold text-2xs cursor-pointer shadow-xs"
                       >
                         {procesandoIngresoId === p._id ? (
                           <>
                             <span className="loading loading-spinner loading-xs"></span>
-                            Registrando ingreso...
+                            Ingresando...
                           </>
                         ) : (
                           <>
-                            <span className="icon-[tabler--login] text-base" aria-hidden="true"></span>
-                            Registrar Ingreso (Dar Paso)
+                            <span className="icon-[tabler--login] text-xs" aria-hidden="true"></span>
+                            Dar Paso Inmediato
                           </>
                         )}
                       </button>

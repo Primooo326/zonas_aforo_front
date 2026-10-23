@@ -71,128 +71,113 @@ export default function PorteriaOperacionesPage() {
     <div className="space-y-6">
       {/* Alerta si no hay vigilante seleccionado */}
       {!vigilanteActivo && vigilantes.length > 0 && (
-        <div className="bg-warning/10 border border-warning/30 text-warning p-3.5 rounded-md flex items-center justify-between text-xs font-medium">
+        <div className="bg-warning/10 border border-warning/30 text-warning px-3.5 py-2.5 rounded-md flex items-center justify-between text-xs font-medium">
           <div className="flex items-center gap-2">
-            <span className="icon-[tabler--alert-triangle] text-lg text-warning shrink-0" aria-hidden="true"></span>
+            <span className="icon-[tabler--alert-triangle] text-base text-warning shrink-0" aria-hidden="true"></span>
             <span>
-              <strong>Atención de Turno:</strong> No has seleccionado el guardia en servicio.
-              Por favor elige tu nombre en el selector superior para firmar las acciones de bitácora y entrega.
+              <strong>Turno sin asignar:</strong> Selecciona el vigilante en servicio en la barra superior.
             </span>
           </div>
         </div>
       )}
 
-      {/* Tarjetas de Resumen Operativo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      {/* Tarjetas de Resumen Operativo Táctico */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
         <Link
           href="/porteria/casillero"
-          className="arch-panel p-4 hover:border-primary/50 transition-colors shadow-xs group"
+          className="arch-panel p-3 hover:border-primary/50 transition-colors shadow-xs group flex items-center justify-between"
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-2xs font-bold text-base-content/60 uppercase tracking-wider">
+          <div>
+            <span className="text-3xs font-bold text-base-content/60 uppercase tracking-wider block">
               Casillero
             </span>
-            <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="icon-[tabler--package] text-lg" aria-hidden="true"></span>
-            </span>
+            <div className="text-xl sm:text-2xl font-black text-base-content tabular-nums mt-0.5">
+              {metricas.paquetesPendientes} <span className="text-3xs font-normal text-base-content/50">pendientes</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-base-content tabular-nums">
-            {metricas.paquetesPendientes}
-          </div>
-          <p className="text-2xs text-base-content/60 mt-0.5">Paquetes por entregar</p>
+          <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="icon-[tabler--package] text-lg" aria-hidden="true"></span>
+          </span>
         </Link>
 
         <Link
           href="/porteria/visitas"
-          className="arch-panel p-4 hover:border-primary/50 transition-colors shadow-xs group"
+          className="arch-panel p-3 hover:border-primary/50 transition-colors shadow-xs group flex items-center justify-between"
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-2xs font-bold text-base-content/60 uppercase tracking-wider">
+          <div>
+            <span className="text-3xs font-bold text-base-content/60 uppercase tracking-wider block">
               Visitas
             </span>
-            <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="icon-[tabler--users] text-lg" aria-hidden="true"></span>
-            </span>
+            <div className="text-xl sm:text-2xl font-black text-base-content tabular-nums mt-0.5">
+              {metricas.visitasActivas} <span className="text-3xs font-normal text-base-content/50">adentro</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-base-content tabular-nums">
-            {metricas.visitasActivas}
-          </div>
-          <p className="text-2xs text-base-content/60 mt-0.5">Personas adentro</p>
+          <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="icon-[tabler--users] text-lg" aria-hidden="true"></span>
+          </span>
         </Link>
 
         <Link
           href="/porteria/minuta"
-          className="arch-panel p-4 hover:border-primary/50 transition-colors shadow-xs group"
+          className="arch-panel p-3 hover:border-primary/50 transition-colors shadow-xs group flex items-center justify-between"
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-2xs font-bold text-base-content/60 uppercase tracking-wider">
+          <div>
+            <span className="text-3xs font-bold text-base-content/60 uppercase tracking-wider block">
               Minuta
             </span>
-            <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="icon-[tabler--notebook] text-lg" aria-hidden="true"></span>
-            </span>
+            <div className="text-xl sm:text-2xl font-black text-base-content tabular-nums mt-0.5">
+              {metricas.novedadesHoy} <span className="text-3xs font-normal text-base-content/50">eventos</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-base-content tabular-nums">
-            {metricas.novedadesHoy}
-          </div>
-          <p className="text-2xs text-base-content/60 mt-0.5">Eventos registrados</p>
+          <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="icon-[tabler--notebook] text-lg" aria-hidden="true"></span>
+          </span>
         </Link>
 
         <Link
           href="/porteria/reservas-hoy"
-          className="arch-panel p-4 hover:border-primary/50 transition-colors shadow-xs group"
+          className="arch-panel p-3 hover:border-primary/50 transition-colors shadow-xs group flex items-center justify-between"
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-2xs font-bold text-base-content/60 uppercase tracking-wider">
-              Zonas Comunes
+          <div>
+            <span className="text-3xs font-bold text-base-content/60 uppercase tracking-wider block">
+              Reservas Hoy
             </span>
-            <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-              <span className="icon-[tabler--calendar-event] text-lg" aria-hidden="true"></span>
-            </span>
+            <div className="text-xl sm:text-2xl font-black text-base-content tabular-nums mt-0.5">
+              {metricas.reservasHoy} <span className="text-3xs font-normal text-base-content/50">zonas</span>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-base-content tabular-nums">
-            {metricas.reservasHoy}
-          </div>
-          <p className="text-2xs text-base-content/60 mt-0.5">Reservas del día</p>
+          <span className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+            <span className="icon-[tabler--calendar-event] text-lg" aria-hidden="true"></span>
+          </span>
         </Link>
       </div>
 
-      {/* Buscador Universal PoLP */}
-      <div className="arch-panel p-4 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
-          <label className="text-2xs font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
-            <span className="icon-[tabler--search] text-primary text-base" aria-hidden="true"></span>
-            Buscador Operativo PoLP (Censo, Vehículos & Mascotas)
-          </label>
-          <span className="text-2xs text-base-content/50">
-            Digita placa, apartamento (ej. 302) o nombre de residente
-          </span>
-        </div>
-
+      {/* Buscador Rápido de Citofonía y Vehículos */}
+      <div className="arch-panel p-3.5 sm:p-4 shadow-xs">
         <div className="relative">
-          <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-base-content/40">
-            <span className="icon-[tabler--scan] text-xl" aria-hidden="true"></span>
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-base-content/40">
+            <span className="icon-[tabler--search] text-lg" aria-hidden="true"></span>
           </span>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => handleBuscar(e.target.value)}
-            placeholder="Buscar por placa (ej: ABC123), torre, apartamento o nombre..."
-            className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md pl-12 pr-12 py-3.5 text-base sm:text-lg focus:border-primary font-mono tracking-wide"
+            placeholder="Buscar por placa, apartamento o habitante..."
+            className="input input-bordered arch-border bg-base-100 text-base-content w-full rounded-md pl-10 pr-10 py-2.5 text-sm sm:text-base focus:border-primary font-mono tracking-wide"
             autoFocus
           />
           {searchTerm && (
             <button
               onClick={() => handleBuscar('')}
-              className="absolute inset-y-0 right-0 pr-4 flex items-center text-base-content/40 hover:text-base-content"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-base-content/40 hover:text-base-content cursor-pointer"
             >
-              <span className="icon-[tabler--x] text-lg" aria-hidden="true"></span>
+              <span className="icon-[tabler--x] text-base" aria-hidden="true"></span>
             </button>
           )}
         </div>
 
         {/* Acciones Rápidas */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t arch-border">
+        <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t arch-border">
           <span className="text-2xs font-bold text-base-content/50 uppercase tracking-wider mr-1">
             Accesos directos:
           </span>

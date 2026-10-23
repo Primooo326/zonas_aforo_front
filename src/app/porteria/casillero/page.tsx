@@ -189,19 +189,19 @@ export default function CasilleroPorteriaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Encabezado Arquitectónico y Selector de Vistas */}
-      <div className="arch-panel p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-        <div>
-          <h1 className="text-xl font-black text-base-content flex items-center gap-2">
+      {/* Encabezado Conciso */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b arch-border">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-black text-base-content flex items-center gap-2">
             <span className="icon-[tabler--package] text-primary text-2xl" aria-hidden="true"></span>
-            Casillero Digital &bull; Paquetería
+            Casillero & Paquetería
           </h1>
-          <p className="text-xs text-base-content/65 mt-0.5">
-            Recepción, custodia y entrega registrada de correspondencia física y encomiendas.
-          </p>
+          <span className="badge badge-sm badge-warning font-mono font-bold">
+            {paquetes.length} pendientes
+          </span>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-base-200 p-1 rounded-md border arch-border self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-base-200 p-1 rounded-md border arch-border self-start sm:self-auto">
           <button
             onClick={() => setTab('pendientes')}
             className={`btn btn-xs font-bold transition-colors ${
@@ -419,74 +419,69 @@ export default function CasilleroPorteriaPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {paquetes.map((p) => (
                 <div
                   key={p._id}
-                  className="arch-panel p-4 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs"
+                  className="arch-panel p-3 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-2.5 py-1 rounded-md bg-base-200 text-base-content font-mono font-bold text-sm border arch-border">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="px-2 py-0.5 rounded bg-base-200 text-base-content font-mono font-bold text-xs border arch-border">
                         {p.torre ? `Torre ${p.torre} - ` : ''}Apto {p.apartamento}
                       </span>
-                      <span className="badge badge-xs badge-warning font-bold">
+                      <span className="badge badge-3xs badge-warning font-bold">
                         Por retirar
                       </span>
                     </div>
 
-                    <div className="space-y-1 mb-2">
-                      <p className="text-xs text-base-content/85 font-semibold flex items-center gap-1.5">
-                        <span className="icon-[tabler--truck-delivery] text-primary" aria-hidden="true"></span>
-                        {p.transportadora} &bull; <span className="capitalize">{p.tipo}</span>
-                      </p>
-                      
-                      {p.destinatario && (
-                        <p className="text-2xs text-base-content/80 font-medium flex items-center gap-1">
-                          <span className="icon-[tabler--user] text-primary" aria-hidden="true"></span>
-                          Para: <strong className="text-base-content">{p.destinatario}</strong>
-                        </p>
-                      )}
-
-                      {p.observaciones && (
-                        <p className="text-2xs text-base-content/60 italic">
-                          &ldquo;{p.observaciones}&rdquo;
-                        </p>
-                      )}
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-base-content">
+                      <span className="icon-[tabler--truck-delivery] text-primary" aria-hidden="true"></span>
+                      <span>{p.transportadora}</span>
+                      <span className="badge badge-3xs badge-ghost capitalize font-medium">{p.tipo}</span>
                     </div>
 
-                    {p.fotoGuiaUrl && (
-                      <div className="mt-2 mb-2">
+                    {p.destinatario && (
+                      <p className="text-2xs text-base-content/80 mt-1">
+                        Para: <strong className="text-base-content">{p.destinatario}</strong>
+                      </p>
+                    )}
+
+                    {p.observaciones && (
+                      <p className="text-3xs italic text-base-content/60 truncate mt-1">
+                        &ldquo;{p.observaciones}&rdquo;
+                      </p>
+                    )}
+
+                    <div className="text-3xs text-base-content/50 pt-1.5 mt-2 border-t arch-border flex items-center justify-between font-mono">
+                      <span>{p.vigilanteRecibioNombre}</span>
+                      {p.fotoGuiaUrl ? (
                         <a
                           href={p.fotoGuiaUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-2xs text-primary hover:underline flex items-center gap-1 font-semibold"
+                          className="text-primary font-bold hover:underline font-sans"
                         >
-                          <span className="icon-[tabler--photo] text-sm" aria-hidden="true"></span>
-                          Ver foto de guía
+                          📷 Foto guía
                         </a>
-                      </div>
-                    )}
-
-                    <div className="text-3xs text-base-content/50 pt-2 border-t arch-border flex items-center justify-between">
-                      <span>Recibió: {p.vigilanteRecibioNombre}</span>
-                      <span className="tabular-nums font-mono">
-                        {new Date(p.fechaRecepcion).toLocaleTimeString('es-CO', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true,
-                        })}
-                      </span>
+                      ) : (
+                        <span>
+                          {new Date(p.fechaRecepcion).toLocaleTimeString('es-CO', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   <button
                     onClick={() => abrirModalEntrega(p)}
-                    className="mt-4 btn btn-sm btn-primary w-full gap-1.5 font-bold text-xs shadow-xs"
+                    className="mt-2.5 btn btn-xs btn-primary w-full gap-1 font-bold text-2xs shadow-xs cursor-pointer"
                   >
-                    <span className="icon-[tabler--check] text-sm" aria-hidden="true"></span>
-                    Entregar a Residente
+                    <span className="icon-[tabler--check] text-xs" aria-hidden="true"></span>
+                    Entregar Paquete
                   </button>
                 </div>
               ))}
