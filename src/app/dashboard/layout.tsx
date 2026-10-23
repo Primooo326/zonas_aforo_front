@@ -28,6 +28,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Panel de Control', icon: 'icon-[tabler--layout-dashboard]' },
     { href: '/dashboard/zonas', label: 'Zonas Comunes & Reservas', icon: 'icon-[tabler--calendar-event]' },
     { href: '/dashboard/censo', label: 'Censo e Inmuebles', icon: 'icon-[tabler--building-community]' },
+    { href: '/dashboard/vigilantes', label: 'Vigilancia & Portería', icon: 'icon-[tabler--shield-check]' },
     { href: '/dashboard/inmuebles', label: 'Venta y Arriendo', icon: 'icon-[tabler--home-dollar]' },
   ];
 
